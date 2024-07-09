@@ -1,0 +1,8 @@
+# Default values for kubernetes-agent.
+
+agent:
+  space: "Default"
+  # -- The target environments to register the agent with
+  # @section -- Agent values
+  targetEnvironments: ["development", "test", "production"]
+  
