@@ -3,8 +3,15 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
+	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/cli"
+	"log"
 	"os"
 )
+
+var actionConfig = new(action.Configuration)
+var client = action.NewInstall(actionConfig)
+var settings = cli.New()
 
 var rootCmd = &cobra.Command{
 	Use:   "migrate-values [RELEASE] [CHART] [flags]",
@@ -37,20 +44,43 @@ The command will return an error if:
 	- no migrations are defined in the chart
 `,
 	Args: cobra.MinimumNArgs(2),
-	Run:  RunCmd,
+	RunE: RunCmd,
 }
 
-func RunCmd(cmd *cobra.Command, args []string) {
+var outputFile string
+
+func RunCmd(cmd *cobra.Command, args []string) error {
+	_, chart, err := nameAndChart(args)
+	if err != nil {
+		return err
+	}
+
+	chartDir, err := pullAndExtractChart(&chart, client)
+	if err != nil {
+		return fmt.Errorf("failed to download chart: %w", err)
+	}
+
+	debug("Using chart at: %s", *chartDir)
+
 	//TODO: Get the chart and version associated with the release
 	//TODO: Get the current release values
 	//TODO: Load the transformations from the migrations directory
 	//TODO: Apply the transformations (if needed) to the current values w.r.t the current chart version
 	//TODO: Output the result or save to a file location
+
+	return nil
 }
 
 func init() {
-	rootCmd.PersistentFlags().BoolP("output-file", "o", false,
+	log.SetFlags(log.Lshortfile)
+
+	rootCmd.Flags().StringVarP(&outputFile, "output-file", "o", "",
 		"The output file to which the result is saved. Standard output is used if this option is not set.")
+
+	settings.AddFlags(rootCmd.PersistentFlags())
+
+	// add the default chart path options
+	addChartPathOptionsFlags(rootCmd.Flags(), &client.ChartPathOptions)
 }
 
 func Execute() {
