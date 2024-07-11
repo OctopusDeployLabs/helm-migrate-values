@@ -102,16 +102,16 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputF
 			debug("Using chart at: %s", *chartDir)
 		}
 
-		currentVersion, err := getCurrentReleaseVersion(name, listAction)
+		release, err := getRelease(name, listAction)
 		if err != nil {
 			return err
 		}
 
-		if currentVersion != nil {
-			debug("Release is currently on chart version: %s", *currentVersion)
+		if release != nil {
+			debug("Release is currently on chart version: %s", release.Chart.Metadata.Version)
+			debug("Release has the values: %s", release.Chart.Values)
 		}
 
-		//TODO: Get the current release values
 		//TODO: Load the transformations from the migrations directory
 		//TODO: Apply the transformations (if needed) to the current values w.r.t the current chart version
 		//TODO: Output the result or save to a file location

@@ -7,7 +7,7 @@ import (
 	"slices"
 )
 
-func getCurrentReleaseVersion(name string, listAction *action.List) (*string, error) {
+func getRelease(name string, listAction *action.List) (*release.Release, error) {
 	listAction.Deployed = true
 	listAction.SetStateMask()
 
@@ -21,5 +21,5 @@ func getCurrentReleaseVersion(name string, listAction *action.List) (*string, er
 		return nil, errors.New("Could not find a Helm release matching the given release name.")
 	}
 
-	return &releases[idx].Chart.Metadata.Version, nil
+	return releases[idx], nil
 }
