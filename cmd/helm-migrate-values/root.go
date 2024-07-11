@@ -70,12 +70,6 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputF
 			return err
 		}
 
-		registryClient, err := newDefaultRegistryClient(false)
-		if err != nil {
-			return err
-		}
-		actionConfig.RegistryClient = registryClient
-
 		name, chart, err := nameAndChart(args)
 		if err != nil {
 			return err
@@ -88,8 +82,9 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputF
 
 		if cleanupDirectory {
 			defer func() {
-				err = os.RemoveAll(*chartDir)
-				err = fmt.Errorf("failed to cleanup extracted chart: %w", err)
+				if err = os.RemoveAll(*chartDir); err != nil {
+					err = fmt.Errorf("failed to cleanup extracted chart: %w", err)
+				}
 			}()
 		}
 
@@ -105,7 +100,7 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputF
 		if release != nil {
 			debug("Release is using chart: %s", release.Chart.Metadata.Name)
 			debug("Release is currently on chart version: %s", release.Chart.Metadata.Version)
-			debug("Release has the values: %s", release.Chart.Values)
+			debug("Release has the values: %s", release.Config)
 		}
 
 		//TODO: Load the transformations from the migrations directory

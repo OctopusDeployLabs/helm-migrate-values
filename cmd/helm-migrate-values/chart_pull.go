@@ -24,7 +24,7 @@ func locateChart(chart string, client *action.Install) (*string, bool, error) {
 
 	//if the located chart path is not a .tgz file, it must be a local directory
 	if !strings.HasSuffix(chartPath, ".tgz") {
-		debug("Chart is not", chartPath)
+		debug("Chart is not a .tgz, using path %s", chartPath)
 		return &chartPath, false, nil
 	}
 
@@ -35,8 +35,7 @@ func locateChart(chart string, client *action.Install) (*string, bool, error) {
 		return nil, false, err
 	}
 
-	err = chartutil.ExpandFile(tempPath, chartPath)
-	if err != nil {
+	if err = chartutil.ExpandFile(tempPath, chartPath); err != nil {
 		return nil, false, err
 	}
 
