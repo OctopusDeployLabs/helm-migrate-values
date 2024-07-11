@@ -108,6 +108,7 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputF
 		}
 
 		if release != nil {
+			debug("Release is using chart: %s", release.Chart.Metadata.Name)
 			debug("Release is currently on chart version: %s", release.Chart.Metadata.Version)
 			debug("Release has the values: %s", release.Chart.Values)
 		}
