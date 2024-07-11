@@ -9,8 +9,11 @@ import (
 	"os"
 )
 
+// We use the install action for locating the chart
 var actionConfig = new(action.Configuration)
 var client = action.NewInstall(actionConfig)
+
+// this loads settings from environment variables as well as the command line flags
 var settings = cli.New()
 
 var rootCmd = &cobra.Command{
@@ -55,9 +58,16 @@ func RunCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	chartDir, err := pullAndExtractChart(&chart, client)
+	chartDir, cleanupDirectory, err := locateChart(chart, client)
 	if err != nil {
 		return fmt.Errorf("failed to download chart: %w", err)
+	}
+
+	if cleanupDirectory {
+		defer func() {
+			err = os.RemoveAll(*chartDir)
+			err = fmt.Errorf("failed to cleanup extracted chart: %w", err)
+		}()
 	}
 
 	debug("Using chart at: %s", *chartDir)
@@ -68,7 +78,7 @@ func RunCmd(cmd *cobra.Command, args []string) error {
 	//TODO: Apply the transformations (if needed) to the current values w.r.t the current chart version
 	//TODO: Output the result or save to a file location
 
-	return nil
+	return err
 }
 
 func init() {
