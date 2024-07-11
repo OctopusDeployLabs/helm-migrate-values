@@ -1,9 +1,0 @@
-# Default values for kubernetes-agent
-
-agent:
-  space: "Default"
-  # -- The target environments to register the agent with
-  # @section -- Agent values
-  deploymentTarget:
-    final:
-      environmentsXXXX: {{ join "," .agent.deploymentTarget.initial.environments | quote }}
