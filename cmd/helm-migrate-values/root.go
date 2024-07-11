@@ -65,21 +65,16 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputF
 	addChartPathOptionsFlags(flags, &installAction.ChartPathOptions)
 
 	return func(cmd *cobra.Command, args []string) error {
+		helmDriver := os.Getenv("HELM_DRIVER")
+		if err := actionConfig.Init(settings.RESTClientGetter(), settings.Namespace(), helmDriver, debug); err != nil {
+			return err
+		}
+
 		registryClient, err := newDefaultRegistryClient(false)
 		if err != nil {
 			return err
 		}
 		actionConfig.RegistryClient = registryClient
-
-		namespace, err := cmd.Flags().GetString("namespace")
-		if err != nil {
-			return err
-		}
-		if namespace == "" {
-			if err := actionConfig.Init(settings.RESTClientGetter(), "", os.Getenv("HELM_DRIVER"), debug); err != nil {
-				return err
-			}
-		}
 
 		name, chart, err := nameAndChart(args)
 		if err != nil {

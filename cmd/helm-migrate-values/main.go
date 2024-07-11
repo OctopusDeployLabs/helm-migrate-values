@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
 	"log"
@@ -17,7 +16,6 @@ func init() {
 }
 
 func main() {
-
 	var actionConfig = new(action.Configuration)
 
 	cmd, err := newRootCmd(actionConfig, os.Stdout, os.Args[1:])
@@ -25,13 +23,6 @@ func main() {
 		warning("%+v", err)
 		os.Exit(1)
 	}
-
-	cobra.OnInitialize(func() {
-		helmDriver := os.Getenv("HELM_DRIVER")
-		if err := actionConfig.Init(settings.RESTClientGetter(), settings.Namespace(), helmDriver, debug); err != nil {
-			log.Fatal(err)
-		}
-	})
 
 	if err := cmd.Execute(); err != nil {
 		fmt.Println(err)
