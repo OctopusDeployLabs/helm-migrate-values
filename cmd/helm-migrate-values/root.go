@@ -111,7 +111,6 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputF
 			debug("Release is currently on chart version: %s", *currentVersion)
 		}
 
-		//TODO: Get the chart and version associated with the release
 		//TODO: Get the current release values
 		//TODO: Load the transformations from the migrations directory
 		//TODO: Apply the transformations (if needed) to the current values w.r.t the current chart version
