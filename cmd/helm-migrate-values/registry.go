@@ -1,4 +1,4 @@
-﻿package cmd
+﻿package main
 
 import (
 	"helm.sh/helm/v3/pkg/registry"
@@ -31,7 +31,7 @@ func newDefaultRegistryClient(plainHTTP bool) (*registry.Client, error) {
 		opts = append(opts, registry.ClientOptPlainHTTP())
 	}
 
-	// Create a new registry client
+	// Create a new registry installAction
 	registryClient, err := registry.NewClient(opts...)
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func newDefaultRegistryClient(plainHTTP bool) (*registry.Client, error) {
 }
 
 func newRegistryClientWithTLS(certFile, keyFile, caFile string, insecureSkipTLSverify bool) (*registry.Client, error) {
-	// Create a new registry client
+	// Create a new registry installAction
 	registryClient, err := registry.NewRegistryClientWithTLS(os.Stderr, certFile, keyFile, caFile, insecureSkipTLSverify,
 		settings.RegistryConfig, settings.Debug,
 	)
