@@ -1,4 +1,4 @@
-﻿package cmd
+﻿package main
 
 import (
 	"helm.sh/helm/v3/pkg/registry"
