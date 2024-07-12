@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"helm-migrate-values/pkg"
 	"helm.sh/helm/v3/pkg/action"
 	"io"
 	"os"
@@ -103,8 +104,11 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputF
 			debug("Release has the values: %s", release.Config)
 		}
 
-		//TODO: Load the transformations from the migrations directory
+		var fileSystem pkg.FileSystem = pkg.RealFileSystem{}
+		migratedValues, err := pkg.Migrate(release.Config, release.Chart.Metadata.Version, nil, *chartDir+"/value/migrations/", fileSystem)
+
 		//TODO: Apply the transformations (if needed) to the current values w.r.t the current chart version
+		println(migratedValues)
 		//TODO: Output the result or save to a file location
 
 		return err
