@@ -4,4 +4,4 @@ usage: "schema migration for Helm values"
 description: "Tool for ensuring user-supplied chart values are kept up to date with the chart's values schema."
 command: "$HELM_PLUGIN_DIR/bin/migrate-values"
 hooks:
-  install: "make build"
+  install: "cd $HELM_PLUGIN_DIR; make build"
