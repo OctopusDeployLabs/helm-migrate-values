@@ -105,10 +105,10 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputF
 		}
 
 		var fileSystem pkg.FileSystem = pkg.RealFileSystem{}
-		migratedValues, err := pkg.Migrate(release.Config, release.Chart.Metadata.Version, nil, *chartDir+"/value/migrations/", fileSystem)
+		migratedValues, err := pkg.Migrate(release.Config, release.Chart.Metadata.Version, nil, *chartDir+"/value-migrations/", fileSystem)
 
 		//TODO: Apply the transformations (if needed) to the current values w.r.t the current chart version
-		println(migratedValues)
+		println(*migratedValues)
 		//TODO: Output the result or save to a file location
 
 		return err

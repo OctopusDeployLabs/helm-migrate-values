@@ -14,6 +14,10 @@ import (
 
 func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, migrationsPath string, fileSystem FileSystem) (*string, error) {
 
+	if len(currentConfig) == 0 {
+		return nil, fmt.Errorf("no values to migrate")
+	}
+
 	fromVer, toVer, err := getVersions(vFrom, vTo)
 	if err != nil {
 		return nil, err
@@ -42,27 +46,32 @@ func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, mi
 	var migratedConfig string
 
 	for _, migration := range migrations {
-		var currentValues []byte
 
 		if migration.to.GreaterThan(toVer) {
-			migratedConfig = string(currentValues)
+			log.Println("Breaking")
 			break
 		}
 
 		if migration.from.GreaterThanOrEqual(fromVer) {
+
 			migrationData, err := fileSystem.ReadFile(migrationsPath + migration.fileName)
 
 			if err != nil {
 				return nil, fmt.Errorf("error reading migration file: %v", err)
 			}
 
-			currentValues, err = apply(currentConfig, string(migrationData))
+			currentValues, err := apply(currentConfig, string(migrationData))
+
+			log.Println(string(currentValues))
 
 			err = yaml.Unmarshal(currentValues, &currentConfig)
 			if err != nil {
-				return nil, fmt.Errorf("error parsing migrated yaml values: %e", err) // TODO: Add migration info here
+				return nil, fmt.Errorf("error parsing migrated yaml values: %v", err) // TODO: Add migration info here
 			}
 
+			migratedConfig = string(currentValues)
+
+			log.Println(migratedConfig)
 		}
 	}
 
@@ -110,6 +119,7 @@ func getVersions(vFrom string, vTo *string) (*version.Version, *version.Version,
 
 func apply(valuesData map[string]interface{}, migration string) ([]byte, error) {
 
+	log.Println(valuesData)
 	migrationTemplate, err := template.New("migration").Funcs(extraFuncs()).Parse(migration)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing migration template: %v", err)

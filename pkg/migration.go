@@ -34,12 +34,12 @@ func NewMigration(fileName string) (*Migration, error) {
 
 	fromVersion, err := version.NewVersion(from)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing 'from' version '%v'': %e", from, err)
+		return nil, fmt.Errorf("error parsing 'from' version '%s'': %v", from, err)
 	}
 
 	toVersion, err := version.NewVersion(to)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing 'to' version '%v': %e", to, err)
+		return nil, fmt.Errorf("error parsing 'to' version '%s': %v", to, err)
 	}
 
 	if fromVersion.GreaterThanOrEqual(toVersion) {
@@ -56,15 +56,20 @@ func NewMigration(fileName string) (*Migration, error) {
 func EnsureMigrationPathExists(migrations []Migration, fromVer *version.Version, toVer *version.Version) error {
 
 	fromVerExists, toVerExists := false, false
+	lenMigrations := len(migrations) - 1
 
-	for i, current := range migrations[:len(migrations)-1] {
+	for i, current := range migrations {
 		fromVerExists = fromVerExists || current.from.Equal(fromVer)
 		toVerExists = toVerExists || current.to.Equal(toVer)
 
-		next := migrations[i+1]
-
-		if !current.to.Equal(&next.from) {
-			return fmt.Errorf("migrations path is broken")
+		if i < lenMigrations {
+			if !current.to.Equal(&migrations[i+1].from) {
+				return fmt.Errorf("migrations path is broken")
+			}
+		} else {
+			if !current.to.Equal(toVer) {
+				return fmt.Errorf("migrations path is broken")
+			}
 		}
 	}
 
