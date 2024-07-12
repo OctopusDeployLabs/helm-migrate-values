@@ -11,7 +11,6 @@ var newMigrationTests = []struct {
 	outToVer   string
 	hasErr     bool
 }{
-	// Existing test cases...
 	{"1.0.0-1.0.1.yaml", "1.0.0", "1.0.1", false},
 	{"1.0.0-alpha-1.0.1.yaml", "1.0.0-alpha", "1.0.1", false},                                                 // 'from' version with pre-release label
 	{"1.0.0-1.0.1-beta.yaml", "1.0.0", "1.0.1-beta", false},                                                   // 'to' version with pre-release label
