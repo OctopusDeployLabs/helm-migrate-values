@@ -1,152 +1,67 @@
 package pkg
 
 import (
-	"bytes"
 	"fmt"
-	"github.com/Masterminds/sprig/v3"
 	"github.com/hashicorp/go-version"
-	"gopkg.in/yaml.v2"
-	"log"
-	"os"
 	"regexp"
-	"sort"
-	"text/template"
 )
 
-type migration struct {
+type Migration struct {
 	from     version.Version
 	to       version.Version
-	filePath string
+	fileName string
 }
 
-func Migrate(values string, vFrom string, vTo *string, migrationsPath string) (*string, error) {
+// From https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string (non-named groups version)
+// var semVerRegEx = "(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?"
+var semVerRegEx = "(?P<major>0|[1-9]\\d*)\\.(?P<minor>0|[1-9]\\d*)\\.(?P<patch>0|[1-9]\\d*)(?:-(?P<prerelease>(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?"
 
-	fromVerPtr, toVerPtr, err := getVersions(vFrom, vTo)
-	if err != nil {
-		return nil, err
-	}
-
-	migrationFiles, err := os.ReadDir(migrationsPath)
-	if err != nil {
-		return nil, fmt.Errorf("error reading migrations directory: %v", err)
-	}
-
-	migrations, err := getMigrations(migrationFiles, fromVerPtr, toVerPtr)
-	if err != nil {
-		return nil, err
-	}
-
-	sort.Slice(migrations, func(i, j int) bool {
-		return migrations[i].from.LessThan(&migrations[j].from)
-	})
-
-	if err = ensureContiguous(migrations); err != nil {
-		return nil, err
-	}
-
-	if toVerPtr == nil {
-		toVerPtr = &migrations[len(migrations)-1].to
-	}
-
-	var valuesData = []byte(values)
-
-	for _, migration := range migrations {
-
-		if migration.to.GreaterThan(toVerPtr) {
-			break
-		}
-
-		if migration.from.GreaterThanOrEqual(fromVerPtr) {
-			file := migrationsPath + migration.filePath
-			migrationData, err := os.ReadFile(file)
-			if err != nil {
-				return nil, fmt.Errorf("error reading migration file: %v", err)
-			}
-
-			valuesData, err = apply(valuesData, string(migrationData))
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-	values = string(valuesData)
-
-	return &values, nil
-
-}
-
-func getMigrations(migrationFiles []os.DirEntry, fromVerPtr *version.Version, toVerPtr *version.Version) ([]migration, error) {
-	migrations := make([]migration, 0, len(migrationFiles))
-
-	fromVerHasMigration := false
-	toVerHasMigration := false
-
-	for _, file := range migrationFiles {
-		migration, err := newMigration(file.Name())
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		fromVerHasMigration = fromVerHasMigration || migration.from.Equal(fromVerPtr)
-		toVerHasMigration = toVerHasMigration || (toVerPtr != nil && migration.to.Equal(toVerPtr))
-
-		migrations = append(migrations, *migration)
-	}
-
-	if !fromVerHasMigration || !toVerHasMigration && toVerPtr != nil {
-		return nil, fmt.Errorf("no migration found between provided versions")
-	}
-	return migrations, nil
-}
-
-func getVersions(vFrom string, vTo *string) (*version.Version, *version.Version, error) {
-	fromVerPtr, err := version.NewVersion(vFrom)
-	if err != nil {
-		return nil, nil, fmt.Errorf("error parsing 'from' version: %v", err)
-	}
-
-	var toVerPtr *version.Version
-
-	if vTo != nil {
-		toVerPtr, err = version.NewVersion(*vTo)
-		if err != nil {
-			return nil, nil, fmt.Errorf("error parsing 'to' version: %v", err)
-		}
-	}
-	return fromVerPtr, toVerPtr, nil
-}
-
-func newMigration(fileName string) (*migration, error) {
-	from, to, filePath := "", "", "migrations/"+fileName
+func NewMigration(fileName string) (*Migration, error) {
 
 	// Get version string from file name, eg migration-v1.0.0-v1.0.1.yaml
-	pattern := `migration-v([0-9]+\.[0-9]+\.[0-9]+(?:-[\w\.-]+)?)\-v([0-9]+\.[0-9]+\.[0-9]+(?:-[\w\.-]+)?)\.yaml` //obvs not my work, need to check this/work out a better way.
+	pattern := fmt.Sprintf(`migration-v(?P<fromVersion>%s)\-v(?P<toVersion>%s)\.yaml`, semVerRegEx, semVerRegEx)
 	re := regexp.MustCompile(pattern)
 
 	matches := re.FindStringSubmatch(fileName)
-	from = matches[1]
-	to = matches[2]
+	names := re.SubexpNames()
+	var from, to string
+	for i, match := range matches {
+		if names[i] == "fromVersion" {
+			from = match
+		} else if names[i] == "toVersion" {
+			to = match
+		}
+	}
 
 	fromVersion, err := version.NewVersion(from)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing 'from' version: %v", err)
+		return nil, fmt.Errorf("error parsing 'from' version '%v'': %e", from, err)
 	}
 
 	toVersion, err := version.NewVersion(to)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing 'to' version: %v", err)
+		return nil, fmt.Errorf("error parsing 'to' version '%v': %e", to, err)
 	}
 
-	return &migration{
-		filePath: filePath,
+	if fromVersion.GreaterThanOrEqual(toVersion) {
+		return nil, fmt.Errorf("migration 'from; versions must be less than their 'to' version")
+	}
+
+	return &Migration{
+		fileName: fileName,
 		from:     *fromVersion,
 		to:       *toVersion,
 	}, nil
 }
 
-func ensureContiguous(migrations []migration) error {
+func EnsurePathExists(migrations []Migration, fromVer *version.Version, toVer *version.Version) error {
+
+	fromVerExists, toVerExists := false, false
 
 	for i, current := range migrations[:len(migrations)-1] {
+		fromVerExists = fromVerExists || current.from.Equal(fromVer)
+		toVerExists = toVerExists || current.to.Equal(toVer)
+
 		next := migrations[i+1]
 
 		if !current.to.Equal(&next.from) {
@@ -154,37 +69,9 @@ func ensureContiguous(migrations []migration) error {
 		}
 	}
 
+	if !fromVerExists || !toVerExists {
+		return fmt.Errorf("no path between versions found")
+	}
+
 	return nil
-}
-
-func apply(values []byte, migration string) ([]byte, error) {
-
-	var valuesData = map[string]interface{}{}
-	err := yaml.Unmarshal(values, &valuesData)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling yaml values: %v", err)
-	}
-
-	migrationTemplate, err := template.New("migration").Funcs(funcMap()).Parse(migration)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing migration template: %v", err)
-	}
-
-	var renderedMigration bytes.Buffer
-
-	err = migrationTemplate.Execute(&renderedMigration, valuesData)
-	if err != nil {
-		return nil, fmt.Errorf("error executing migration template: %v", err)
-	}
-
-	return renderedMigration.Bytes(), nil
-}
-
-// Modified from https://github.com/helm/helm/blob/2feac15cc3252c97c997be2ced1ab8afe314b429/pkg/engine/funcs.go#L43
-func funcMap() template.FuncMap {
-	f := sprig.TxtFuncMap()
-	delete(f, "env")
-	delete(f, "expandenv")
-
-	return f
 }
