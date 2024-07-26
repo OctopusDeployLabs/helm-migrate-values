@@ -54,8 +54,6 @@ target:
 	},
 }
 
-// Do we need to consider scenarios where we don't have a migration for a given version? Is that actually possible?
-
 func TestMigrator_ValuesTests(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -125,6 +123,20 @@ var versionsTestCases = []struct {
 		expectError:       false,
 	},
 	{
+		name:              "From version is after migration versions",
+		fromVersion:       "5.0.0",
+		toVersion:         nil,
+		migrationVersions: []string{"1.0.0-1.0.1.yaml", "1.0.1-1.0.2.yaml"},
+		expectError:       false,
+	},
+	{
+		name:              "From version is prior to start of migrations'",
+		fromVersion:       "0.0.1",
+		toVersion:         nil,
+		migrationVersions: []string{"1.0.0-1.0.1.yaml"},
+		expectError:       false,
+	},
+	{
 		name:              "Upgrade not required",
 		fromVersion:       "1.0.1",
 		toVersion:         nil,
@@ -139,46 +151,39 @@ var versionsTestCases = []struct {
 		expectError:       false,
 	},
 	{
-		name:              "'To' version does not have a migration",
+		name:              "To version does not have a migration",
 		fromVersion:       "1.0.0",
 		toVersion:         stringToPtr("1.0.3"),
 		migrationVersions: []string{"1.0.0-1.0.1.yaml", "1.0.1-1.0.2.yaml"},
 		expectError:       false,
 	},
 	{
-		name:              "'From' version does not have a migration",
+		name:              "From version does not have a migration",
 		fromVersion:       "0.0.1",
 		toVersion:         nil,
 		migrationVersions: []string{"1.0.0-1.0.1.yaml", "1.0.1-1.0.2.yaml"},
 		expectError:       false,
 	},
 	{
-		name:              "Invalid 'from' version",
+		name:              "Invalid from version",
 		fromVersion:       "1.invalid.0",
 		toVersion:         nil,
 		migrationVersions: []string{"1.0.0-1.0.1.yaml", "1.0.2-1.0.3.yaml"},
 		expectError:       true,
 	},
 	{
-		name:              "Invalid 'to' version",
+		name:              "Invalid to version",
 		fromVersion:       "1.0.0",
 		toVersion:         stringToPtr("1.invalid.0"),
 		migrationVersions: []string{"1.0.0-1.0.1.yaml", "1.0.2-1.0.3.yaml"},
 		expectError:       true,
 	},
 	{
-		name:              "'To' version before 'from' version",
+		name:              "To version before from version",
 		fromVersion:       "2.0.0",
 		toVersion:         stringToPtr("1.0.0"),
 		migrationVersions: []string{"1.0.0-1.0.1.yaml"},
 		expectError:       true,
-	},
-	{
-		name:              "''From' version is prior to start of migrations'",
-		fromVersion:       "0.0.1",
-		toVersion:         stringToPtr("1.0.1"),
-		migrationVersions: []string{"1.0.0-1.0.1.yaml"},
-		expectError:       false,
 	},
 }
 
