@@ -43,7 +43,7 @@ func NewMigration(fileName string) (*Migration, error) {
 	}
 
 	if fromVersion.GreaterThanOrEqual(toVersion) {
-		return nil, fmt.Errorf("migration 'from; versions must be less than their 'to' version")
+		return nil, fmt.Errorf("migration 'from' versions must be less than their 'to' version")
 	}
 
 	return &Migration{
@@ -51,31 +51,4 @@ func NewMigration(fileName string) (*Migration, error) {
 		from:     *fromVersion,
 		to:       *toVersion,
 	}, nil
-}
-
-func EnsureMigrationPathExists(migrations []Migration, fromVer *version.Version, toVer *version.Version) error {
-
-	fromVerExists, toVerExists := false, false
-	lenMigrations := len(migrations) - 1
-
-	for i, current := range migrations {
-		fromVerExists = fromVerExists || current.from.Equal(fromVer)
-		toVerExists = toVerExists || current.to.Equal(toVer)
-
-		if i < lenMigrations {
-			if !current.to.Equal(&migrations[i+1].from) {
-				return fmt.Errorf("migrations path is broken")
-			}
-		} else {
-			if !current.to.Equal(toVer) {
-				return fmt.Errorf("migrations path is broken")
-			}
-		}
-	}
-
-	if !fromVerExists || !toVerExists {
-		return fmt.Errorf("no path between versions found")
-	}
-
-	return nil
 }

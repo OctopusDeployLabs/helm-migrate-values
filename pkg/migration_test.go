@@ -1,7 +1,6 @@
 package pkg
 
 import (
-	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -47,18 +46,4 @@ func TestNewMigration(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestEnsureMigrationPathExists(t *testing.T) {
-	migrations := []Migration{
-		{from: *version.Must(version.NewVersion("1.0.0")), to: *version.Must(version.NewVersion("1.0.1")), fileName: "1.0.0-1.0.1.yaml"},
-		{from: *version.Must(version.NewVersion("1.0.1")), to: *version.Must(version.NewVersion("1.0.2")), fileName: "1.0.1-1.0.2.yaml"},
-		{from: *version.Must(version.NewVersion("1.0.2")), to: *version.Must(version.NewVersion("1.0.3")), fileName: "1.0.2-1.0.3.yaml"},
-	}
-
-	fromVer, _ := version.NewVersion("1.0.0")
-	toVer, _ := version.NewVersion("1.0.3")
-
-	err := EnsureMigrationPathExists(migrations, fromVer, toVer)
-	assert.NoError(t, err)
 }

@@ -39,10 +39,6 @@ func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, mi
 		toVer = &migrations[len(migrations)-1].to
 	}
 
-	if err = EnsureMigrationPathExists(migrations, fromVer, toVer); err != nil {
-		return nil, err
-	}
-
 	var migratedConfig string
 
 	for _, migration := range migrations {
@@ -110,7 +106,12 @@ func getVersions(vFrom string, vTo *string) (*version.Version, *version.Version,
 		if err != nil {
 			return nil, nil, fmt.Errorf("error parsing 'to' version: %v", err)
 		}
+
+		if fromVerPtr.GreaterThanOrEqual(toVerPtr) {
+			return nil, nil, fmt.Errorf("'from' version must be less than 'to' version")
+		}
 	}
+
 	return fromVerPtr, toVerPtr, nil
 }
 
