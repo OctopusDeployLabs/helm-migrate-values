@@ -7,8 +7,8 @@ import (
 	"github.com/hashicorp/go-version"
 	"gopkg.in/yaml.v2"
 	"log"
-	"os"
 	"sort"
+	"strings"
 	"text/template"
 )
 
@@ -23,7 +23,7 @@ func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, mi
 		return nil, err
 	}
 
-	migrations, err := getMigrations(migrationsPath)
+	migrations, err := getMigrations(migrationsPath, fileSystem)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,6 @@ func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, mi
 	for _, migration := range migrations {
 
 		if migration.to.GreaterThan(toVer) {
-			log.Println("Breaking")
 			break
 		}
 
@@ -61,8 +60,9 @@ func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, mi
 			}
 
 			currentValues, err := apply(currentConfig, string(migrationData))
-
-			log.Println(string(currentValues))
+			if err != nil {
+				return nil, fmt.Errorf("error applying migration: %v", err)
+			}
 
 			err = yaml.Unmarshal(currentValues, &currentConfig)
 			if err != nil {
@@ -70,18 +70,15 @@ func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, mi
 			}
 
 			migratedConfig = string(currentValues)
-
-			log.Println(migratedConfig)
 		}
 	}
 
 	return &migratedConfig, nil
-
 }
 
-func getMigrations(migrationsPath string) ([]Migration, error) {
+func getMigrations(migrationsPath string, fileSystem FileSystem) ([]Migration, error) {
 
-	migrationFiles, err := os.ReadDir(migrationsPath)
+	migrationFiles, err := fileSystem.ReadDir(migrationsPath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading migrations directory: %v", err)
 	}
@@ -118,8 +115,6 @@ func getVersions(vFrom string, vTo *string) (*version.Version, *version.Version,
 }
 
 func apply(valuesData map[string]interface{}, migration string) ([]byte, error) {
-
-	log.Println(valuesData)
 	migrationTemplate, err := template.New("migration").Funcs(extraFuncs()).Parse(migration)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing migration template: %v", err)
@@ -141,5 +136,19 @@ func extraFuncs() template.FuncMap {
 	delete(f, "env")
 	delete(f, "expandenv")
 
+	f["quoteEach"] = quoteEach
+
 	return f
+}
+
+func quoteEach(s []interface{}) (string, error) {
+	var quoted []string
+	for _, v := range s {
+		str, ok := v.(string)
+		if !ok {
+			return "", fmt.Errorf("quoteEach: expected all elements to be strings, got %T", v)
+		}
+		quoted = append(quoted, fmt.Sprintf("%q", str))
+	}
+	return strings.Join(quoted, ", "), nil
 }
