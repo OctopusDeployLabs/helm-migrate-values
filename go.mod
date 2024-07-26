@@ -2,6 +2,8 @@ module helm-migrate-values
 
 go 1.22
 
+toolchain go1.22.3
+
 require (
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.8.1
