@@ -16,7 +16,7 @@ var testCases = []struct {
 	expectError    bool
 }{
 	{
-		name:          "Happy path",
+		name:          "Valid migration",
 		currentConfig: `targetEnvironments: ["development", "test", "production"]`,
 		migration: `
 target:
