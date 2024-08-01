@@ -31,7 +31,7 @@ var newMigrationTests = []struct {
 func TestNewMigration(t *testing.T) {
 	for _, tt := range newMigrationTests {
 		t.Run(tt.name, func(t *testing.T) {
-			migration, err := NewMigration(tt.in)
+			migration, err := newMigration(tt.in)
 
 			if tt.hasErr {
 				assert.Error(t, err)
