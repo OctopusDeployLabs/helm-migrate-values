@@ -7,9 +7,8 @@ import (
 )
 
 type Migration struct {
-	from     version.Version
-	to       version.Version
-	fileName string
+	From version.Version
+	To   version.Version
 }
 
 // From https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string (named groups version)
@@ -47,8 +46,7 @@ func NewMigration(fileName string) (*Migration, error) {
 	}
 
 	return &Migration{
-		fileName: fileName,
-		from:     *fromVersion,
-		to:       *toVersion,
+		From: *fromVersion,
+		To:   *toVersion,
 	}, nil
 }

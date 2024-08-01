@@ -2,17 +2,16 @@ package pkg
 
 import (
 	"bytes"
+	"cmp"
 	"fmt"
 	"github.com/Masterminds/sprig/v3"
 	"github.com/hashicorp/go-version"
 	"gopkg.in/yaml.v2"
-	"log"
-	"sort"
 	"strings"
 	"text/template"
 )
 
-func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, migrationsPath string, fileSystem FileSystem) (*string, error) {
+func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, ms Migrations) (*string, error) {
 
 	if len(currentConfig) == 0 {
 		return nil, fmt.Errorf("no values to migrate")
@@ -23,41 +22,34 @@ func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, mi
 		return nil, err
 	}
 
-	migrations, err := getMigrations(migrationsPath, fileSystem)
-	if err != nil {
-		return nil, err
+	migrations, err := ms.GetSortedMigrations()
+	if err != nil || len(migrations) == 0 {
+		return nil, cmp.Or(err, fmt.Errorf("no migrations found"))
 	}
-	if len(migrations) == 0 {
-		return nil, fmt.Errorf("no migrations found in %s", migrationsPath)
-	}
-
-	sort.Slice(migrations, func(i, j int) bool {
-		return migrations[i].from.LessThan(&migrations[j].from)
-	})
 
 	if toVer == nil {
-		toVer = &migrations[len(migrations)-1].to
+		toVer = &migrations[len(migrations)-1].To
 	}
 
 	var migratedConfig string
 
 	for _, migration := range migrations {
 
-		if migration.to.GreaterThan(toVer) {
+		if migration.To.GreaterThan(toVer) {
 			break
 		}
 
-		if migration.from.GreaterThanOrEqual(fromVer) {
+		if migration.From.GreaterThanOrEqual(fromVer) {
 
-			migrationData, err := fileSystem.ReadFile(migrationsPath + migration.fileName)
+			migrationData, err := ms.GetDataForMigration(&migration)
 
 			if err != nil {
-				return nil, fmt.Errorf("error reading migration file: %v", err)
+				return nil, fmt.Errorf("error reading migration: %v", err)
 			}
 
 			currentValues, err := apply(currentConfig, string(migrationData))
 			if err != nil {
-				return nil, fmt.Errorf("error applying migration: %v", err)
+				return nil, err
 			}
 
 			err = yaml.Unmarshal(currentValues, &currentConfig)
@@ -70,27 +62,6 @@ func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, mi
 	}
 
 	return &migratedConfig, nil
-}
-
-func getMigrations(migrationsPath string, fileSystem FileSystem) ([]Migration, error) {
-
-	migrationFiles, err := fileSystem.ReadDir(migrationsPath)
-	if err != nil {
-		return nil, fmt.Errorf("error reading migrations directory: %v", err)
-	}
-
-	migrations := make([]Migration, 0, len(migrationFiles))
-
-	for _, file := range migrationFiles {
-		migration, err := NewMigration(file.Name())
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		migrations = append(migrations, *migration)
-	}
-
-	return migrations, nil
 }
 
 func getVersions(vFrom string, vTo *string) (*version.Version, *version.Version, error) {

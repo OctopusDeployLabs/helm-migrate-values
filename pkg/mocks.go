@@ -1,47 +1,29 @@
 package pkg
 
-import "fmt"
+import "sort"
 
-type MockFileSystem struct {
-	fileNameData   map[string]string
-	fileErr        error
-	dirNameEntries map[string][]MockDirEntry
-	dirErr         error
-}
-type MockDirEntry struct {
-	name  string
-	isDir bool
+type MockMigrations struct {
+	migrations       []Migration
+	migrationDataMap map[string][]byte
 }
 
-func (d MockDirEntry) Name() string {
-	return d.name
-}
-func (d MockDirEntry) IsDir() bool {
-	return d.isDir
-}
-
-func (m MockFileSystem) ReadFile(name string) ([]byte, error) {
-	if m.fileErr != nil {
-		return nil, m.fileErr
+func NewMockMigrations() *MockMigrations {
+	return &MockMigrations{
+		migrationDataMap: make(map[string][]byte),
 	}
-	data, ok := m.fileNameData[name]
-	if !ok {
-		return nil, fmt.Errorf("file '%s' not found", name)
-	}
-	return []byte(data), nil
 }
 
-func (m MockFileSystem) ReadDir(name string) ([]DirEntry, error) {
-	if m.dirErr != nil {
-		return nil, m.dirErr
-	}
-	entry, ok := m.dirNameEntries[name]
-	if !ok {
-		return nil, fmt.Errorf("directory '%s' not found", name)
-	}
-	var dirEntries []DirEntry
-	for _, mockEntry := range entry {
-		dirEntries = append(dirEntries, mockEntry)
-	}
-	return dirEntries, m.dirErr
+func (ms *MockMigrations) AddMigrationData(m *Migration, data string) {
+	ms.migrationDataMap[m.From.String()+"-"+m.To.String()] = []byte(data)
+}
+
+func (ms *MockMigrations) GetSortedMigrations() ([]Migration, error) {
+	sort.Slice(ms.migrations, func(i, j int) bool {
+		return ms.migrations[i].From.LessThan(&ms.migrations[j].From)
+	})
+	return ms.migrations, nil
+}
+
+func (ms *MockMigrations) GetDataForMigration(m *Migration) ([]byte, error) {
+	return ms.migrationDataMap[m.From.String()+"-"+m.To.String()], nil
 }
