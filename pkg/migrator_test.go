@@ -86,7 +86,7 @@ func stringToPtr(s string) *string {
 	return &s
 }
 
-var versionsTestCases = []struct {
+var migrationPathsTestCases = []struct {
 	name        string
 	fromVersion string
 	toVersion   *string
@@ -221,8 +221,8 @@ var versionsTestCases = []struct {
 	},
 }
 
-func TestMigrator_MigrationVersionsTests(t *testing.T) {
-	for _, tc := range versionsTestCases {
+func TestMigrator_MigrationPathsTests(t *testing.T) {
+	for _, tc := range migrationPathsTestCases {
 		t.Run(tc.name, func(t *testing.T) {
 
 			var config map[string]interface{}
