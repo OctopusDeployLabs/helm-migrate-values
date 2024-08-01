@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-var newMigrationTests = []struct {
+var filenameParserTests = []struct {
 	name       string
 	in         string
 	outFromVer string
@@ -28,10 +28,10 @@ var newMigrationTests = []struct {
 	{"Versions should not start with v", "v1.0.0-v1.0.1.yaml", "", "", true},
 }
 
-func TestNewMigration(t *testing.T) {
-	for _, tt := range newMigrationTests {
+func TestParseFilenameIntoMigration(t *testing.T) {
+	for _, tt := range filenameParserTests {
 		t.Run(tt.name, func(t *testing.T) {
-			migration, err := newMigration(tt.in)
+			migration, err := parseFilenameIntoMigration(tt.in)
 
 			if tt.hasErr {
 				assert.Error(t, err)

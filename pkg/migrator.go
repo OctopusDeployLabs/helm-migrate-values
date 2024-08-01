@@ -27,7 +27,7 @@ func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, ms
 		return migrations[i].From.LessThan(&migrations[j].From)
 	})
 
-	fromVer, toVer, err := parseVersions(vFrom, vTo, migrations)
+	fromVer, toVer, err := getVersions(vFrom, vTo, migrations)
 	if err != nil {
 		return nil, err
 	}
@@ -35,35 +35,37 @@ func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, ms
 	var migratedConfig string
 
 	for _, migration := range migrations {
+
 		if migration.To.GreaterThan(toVer) {
 			break
 		}
-
-		if migration.From.GreaterThanOrEqual(fromVer) {
-			migrationData, err := ms.GetDataForMigration(&migration)
-
-			if err != nil {
-				return nil, fmt.Errorf("error reading migration: %v", err)
-			}
-
-			currentValues, err := apply(currentConfig, string(migrationData))
-			if err != nil {
-				return nil, err
-			}
-
-			err = yaml.Unmarshal(currentValues, &currentConfig)
-			if err != nil {
-				return nil, fmt.Errorf("error parsing migrated yaml values: %v", err) // TODO: Add migration info here
-			}
-
-			migratedConfig = string(currentValues)
+		if migration.From.LessThan(fromVer) {
+			continue
 		}
+
+		migrationData, err := ms.GetDataForMigration(&migration)
+
+		if err != nil {
+			return nil, fmt.Errorf("error reading migration: %v", err)
+		}
+
+		currentValues, err := apply(currentConfig, string(migrationData))
+		if err != nil {
+			return nil, err
+		}
+
+		err = yaml.Unmarshal(currentValues, &currentConfig)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing migrated yaml values: %v", err) // TODO: Add migration info here
+		}
+
+		migratedConfig = string(currentValues)
 	}
 
 	return &migratedConfig, nil
 }
 
-func parseVersions(vFrom string, vTo *string, migrations []Migration) (*version.Version, *version.Version, error) {
+func getVersions(vFrom string, vTo *string, migrations []Migration) (*version.Version, *version.Version, error) {
 	fromVerPtr, err := version.NewVersion(vFrom)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error parsing 'from' version: %v", err)

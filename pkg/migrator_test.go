@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-var testCases = []struct {
+var migratorTestCases = []struct {
 	name           string
 	currentConfig  string
 	migration      string
@@ -57,7 +57,7 @@ target:
 }
 
 func TestMigrator_ValuesTests(t *testing.T) {
-	for _, tc := range testCases {
+	for _, tc := range migratorTestCases {
 		t.Run(tc.name, func(t *testing.T) {
 
 			var config map[string]interface{}
