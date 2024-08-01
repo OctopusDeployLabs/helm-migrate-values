@@ -1,7 +1,5 @@
 package pkg
 
-import "sort"
-
 type MockMigrations struct {
 	migrations       []Migration
 	migrationDataMap map[string][]byte
@@ -13,14 +11,12 @@ func NewMockMigrations() *MockMigrations {
 	}
 }
 
-func (ms *MockMigrations) AddMigrationData(m *Migration, data string) {
+func (ms *MockMigrations) AddMigrationData(m Migration, data string) {
+	ms.migrations = append(ms.migrations, m)
 	ms.migrationDataMap[m.From.String()+"-"+m.To.String()] = []byte(data)
 }
 
-func (ms *MockMigrations) GetSortedMigrations() ([]Migration, error) {
-	sort.Slice(ms.migrations, func(i, j int) bool {
-		return ms.migrations[i].From.LessThan(&ms.migrations[j].From)
-	})
+func (ms *MockMigrations) GetMigrations() ([]Migration, error) {
 	return ms.migrations, nil
 }
 

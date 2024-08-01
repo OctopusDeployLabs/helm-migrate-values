@@ -1,8 +1,10 @@
 package pkg
 
 import (
+	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
+	"log"
 	"testing"
 )
 
@@ -62,22 +64,19 @@ func TestMigrator_ValuesTests(t *testing.T) {
 			err := yaml.Unmarshal([]byte(tc.currentConfig), &config)
 			assert.NoError(t, err)
 
-			fs := MockFileSystem{
-				fileNameData: map[string]string{
-					"testdata/migrations/1.0.0-1.0.1.yaml": tc.migration,
-				},
-				dirNameEntries: map[string][]MockDirEntry{
-					"testdata/migrations/": {MockDirEntry{name: "1.0.0-1.0.1.yaml", isDir: false}},
-				},
-			}
+			ms := NewMockMigrations()
+			m := newMigration("1.0.0", "1.0.1")
+			ms.AddMigrationData(m, tc.migration)
 
-			output, err := Migrate(config, "1.0.0", nil, "testdata/migrations/", fs)
+			output, err := Migrate(config, m.From.String(), nil, ms)
 
 			if tc.expectError {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tc.expectedOutput, *output)
+				if err == nil {
+					assert.Equal(t, tc.expectedOutput, *output)
+				}
 			}
 		})
 	}
@@ -88,102 +87,137 @@ func stringToPtr(s string) *string {
 }
 
 var versionsTestCases = []struct {
-	name              string
-	fromVersion       string
-	toVersion         *string
-	migrationVersions []string
-	expectError       bool
+	name        string
+	fromVersion string
+	toVersion   *string
+	migrations  []Migration
+	expectError bool
 }{
 	{
-		name:              "Upgrade single version",
-		fromVersion:       "1.0.0",
-		toVersion:         nil,
-		migrationVersions: []string{"1.0.0-1.0.1.yaml"},
-		expectError:       false,
+		name:        "Upgrade single version",
+		fromVersion: "1.0.0",
+		toVersion:   nil,
+		migrations: []Migration{
+			newMigration("1.0.0", "1.0.1"),
+		},
+		expectError: false,
 	},
 	{
-		name:              "Upgrade path exists across multiple versions",
-		fromVersion:       "1.0.0",
-		toVersion:         nil,
-		migrationVersions: []string{"1.0.0-1.0.1.yaml", "1.0.1-1.0.2.yaml"},
-		expectError:       false,
+		name:        "Upgrade path exists across multiple versions",
+		fromVersion: "1.0.0",
+		toVersion:   nil,
+		migrations: []Migration{
+			newMigration("1.0.0", "1.0.1"),
+			newMigration("1.0.1", "1.0.2"),
+		},
+		expectError: false,
 	},
 	{
-		name:              "Upgrade path exists and from version is in middle of possible migration versions",
-		fromVersion:       "1.0.1",
-		toVersion:         nil,
-		migrationVersions: []string{"1.0.0-1.0.1.yaml", "1.0.1-1.0.2.yaml"},
-		expectError:       false,
+		name:        "Upgrade path exists and from version is in middle of possible migration versions",
+		fromVersion: "1.0.1",
+		toVersion:   nil,
+		migrations: []Migration{
+			newMigration("1.0.0", "1.0.1"),
+			newMigration("1.0.1", "1.0.2"),
+		},
+		expectError: false,
 	},
 	{
-		name:              "Upgrade path doesn't exist and from version is in middle of missing migration versions",
-		fromVersion:       "1.0.1",
-		toVersion:         nil,
-		migrationVersions: []string{"1.0.0-1.0.1.yaml", "1.0.2-1.0.3.yaml"},
-		expectError:       false,
+		name:        "Upgrade path doesn't exist and from version is in middle of missing migration versions",
+		fromVersion: "1.0.1",
+		toVersion:   nil,
+		migrations: []Migration{
+			newMigration("1.0.0", "1.0.1"),
+			newMigration("1.0.2", "1.0.3"),
+		},
+		expectError: false,
 	},
 	{
-		name:              "From version is after migration versions",
-		fromVersion:       "5.0.0",
-		toVersion:         nil,
-		migrationVersions: []string{"1.0.0-1.0.1.yaml", "1.0.1-1.0.2.yaml"},
-		expectError:       false,
+		name:        "From version is after migration versions",
+		fromVersion: "5.0.0",
+		toVersion:   nil,
+		migrations: []Migration{
+			newMigration("1.0.0", "1.0.1"),
+			newMigration("1.0.1", "1.0.2"),
+		},
+		expectError: false,
 	},
 	{
-		name:              "From version is prior to start of migrations'",
-		fromVersion:       "0.0.1",
-		toVersion:         nil,
-		migrationVersions: []string{"1.0.0-1.0.1.yaml"},
-		expectError:       false,
+		name:        "From version is prior to start of migrations'",
+		fromVersion: "0.0.1",
+		toVersion:   nil,
+		migrations: []Migration{
+			newMigration("1.0.0", "1.0.1"),
+		},
+		expectError: false,
 	},
 	{
-		name:              "Upgrade not required",
-		fromVersion:       "1.0.1",
-		toVersion:         nil,
-		migrationVersions: []string{"1.0.0-1.0.1.yaml"},
-		expectError:       false,
+		name:        "Upgrade not required",
+		fromVersion: "1.0.1",
+		toVersion:   nil,
+		migrations: []Migration{
+			newMigration("1.0.0", "1.0.1"),
+		},
+		expectError: false,
 	},
 	{
-		name:              "Migration path is broken",
-		fromVersion:       "1.0.0",
-		toVersion:         nil,
-		migrationVersions: []string{"1.0.0-1.0.1.yaml", "1.0.2-1.0.3.yaml"},
-		expectError:       false,
+		name:        "Migration path is broken",
+		fromVersion: "1.0.0",
+		toVersion:   nil,
+		migrations: []Migration{
+			newMigration("1.0.0", "1.0.1"),
+			newMigration("1.0.2", "1.0.3"),
+		},
+		expectError: false,
 	},
 	{
-		name:              "To version does not have a migration",
-		fromVersion:       "1.0.0",
-		toVersion:         stringToPtr("1.0.3"),
-		migrationVersions: []string{"1.0.0-1.0.1.yaml", "1.0.1-1.0.2.yaml"},
-		expectError:       false,
+		name:        "To version does not have a migration",
+		fromVersion: "1.0.0",
+		toVersion:   stringToPtr("1.0.3"),
+		migrations: []Migration{
+			newMigration("1.0.0", "1.0.1"),
+			newMigration("1.0.1", "1.0.2"),
+		},
+		expectError: false,
 	},
 	{
-		name:              "From version does not have a migration",
-		fromVersion:       "0.0.1",
-		toVersion:         nil,
-		migrationVersions: []string{"1.0.0-1.0.1.yaml", "1.0.1-1.0.2.yaml"},
-		expectError:       false,
+		name:        "From version does not have a migration",
+		fromVersion: "0.0.1",
+		toVersion:   nil,
+		migrations: []Migration{
+			newMigration("1.0.0", "1.0.1"),
+			newMigration("1.0.1", "1.0.2"),
+		},
+		expectError: false,
 	},
 	{
-		name:              "Invalid from version",
-		fromVersion:       "1.invalid.0",
-		toVersion:         nil,
-		migrationVersions: []string{"1.0.0-1.0.1.yaml", "1.0.2-1.0.3.yaml"},
-		expectError:       true,
+		name:        "Invalid from version",
+		fromVersion: "1.invalid.0",
+		toVersion:   nil,
+		migrations: []Migration{
+			newMigration("1.0.0", "1.0.1"),
+			newMigration("1.0.2", "1.0.3"),
+		},
+		expectError: true,
 	},
 	{
-		name:              "Invalid to version",
-		fromVersion:       "1.0.0",
-		toVersion:         stringToPtr("1.invalid.0"),
-		migrationVersions: []string{"1.0.0-1.0.1.yaml", "1.0.2-1.0.3.yaml"},
-		expectError:       true,
+		name:        "Invalid to version",
+		fromVersion: "1.0.0",
+		toVersion:   stringToPtr("1.invalid.0"),
+		migrations: []Migration{
+			newMigration("1.0.0", "1.0.1"),
+			newMigration("1.0.2", "1.0.3"),
+		},
+		expectError: true,
 	},
 	{
-		name:              "To version before from version",
-		fromVersion:       "2.0.0",
-		toVersion:         stringToPtr("1.0.0"),
-		migrationVersions: []string{"1.0.0-1.0.1.yaml"},
-		expectError:       true,
+		name:        "To version before from version",
+		fromVersion: "2.0.0",
+		toVersion:   stringToPtr("1.0.0"),
+		migrations: []Migration{
+			newMigration("1.0.0", "1.0.1"),
+		},
+		expectError: true,
 	},
 }
 
@@ -194,24 +228,15 @@ func TestMigrator_MigrationVersionsTests(t *testing.T) {
 			var config map[string]interface{}
 			var _ = yaml.Unmarshal([]byte("agent:"), &config)
 
-			var fileNameData = make(map[string]string)
-			for _, migrationVersion := range tc.migrationVersions {
-				fileNameData["testdata/migrations/"+migrationVersion] = "target:"
+			someIrrelevantData := "target:"
+
+			ms := NewMockMigrations()
+
+			for _, migration := range tc.migrations {
+				ms.AddMigrationData(migration, someIrrelevantData)
 			}
 
-			var mockDirEntries []MockDirEntry
-			for _, migrationVersion := range tc.migrationVersions {
-				mockDirEntries = append(mockDirEntries, MockDirEntry{name: migrationVersion, isDir: false})
-			}
-			var dirNameEntries = make(map[string][]MockDirEntry)
-			dirNameEntries["testdata/migrations/"] = mockDirEntries
-
-			fs := MockFileSystem{
-				fileNameData:   fileNameData,
-				dirNameEntries: dirNameEntries,
-			}
-
-			var _, err = Migrate(config, tc.fromVersion, tc.toVersion, "testdata/migrations/", fs)
+			var _, err = Migrate(config, tc.fromVersion, tc.toVersion, ms)
 
 			if tc.expectError {
 				assert.Error(t, err)
@@ -219,5 +244,20 @@ func TestMigrator_MigrationVersionsTests(t *testing.T) {
 				assert.NoError(t, err)
 			}
 		})
+	}
+}
+
+func newMigration(vFrom string, vTo string) Migration {
+	from, err := version.NewVersion(vFrom)
+	if err != nil {
+		log.Fatal(err)
+	}
+	to, err := version.NewVersion(vTo)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return Migration{
+		From: *from,
+		To:   *to,
 	}
 }

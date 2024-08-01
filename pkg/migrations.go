@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sort"
 )
 
 type Migrations interface {
 	GetDataForMigration(migration *Migration) ([]byte, error)
-	GetSortedMigrations() ([]Migration, error)
+	GetMigrations() ([]Migration, error)
 }
 
 type FileSystemMigrations struct {
@@ -18,8 +17,7 @@ type FileSystemMigrations struct {
 }
 
 func NewFileSystemMigrations(migrationsPath string) (*FileSystemMigrations, error) {
-
-	migrations, err := getSortedMigrations(migrationsPath)
+	migrations, err := loadMigrations(migrationsPath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading migrations: %v", err)
 	}
@@ -39,7 +37,11 @@ func (migrations *FileSystemMigrations) GetDataForMigration(m *Migration) ([]byt
 	return data, nil
 }
 
-func getSortedMigrations(migrationsPath string) ([]Migration, error) {
+func (migrations *FileSystemMigrations) GetMigrations() ([]Migration, error) {
+	return migrations.migrations, nil
+}
+
+func loadMigrations(migrationsPath string) ([]Migration, error) {
 
 	migrationFiles, err := os.ReadDir(migrationsPath)
 	if err != nil {
@@ -56,10 +58,6 @@ func getSortedMigrations(migrationsPath string) ([]Migration, error) {
 
 		ms = append(ms, *migration)
 	}
-
-	sort.Slice(ms, func(i, j int) bool {
-		return ms[i].From.LessThan(&ms[j].From)
-	})
 
 	return ms, nil
 }

@@ -105,7 +105,10 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputF
 		}
 
 		if release.Config != nil && len(release.Config) > 0 {
-			migratedValues, err := pkg.Migrate(release.Config, release.Chart.Metadata.Version, nil, *chartDir+"/value-migrations/", pkg.RealFileSystem{})
+
+			migrations, err := pkg.NewFileSystemMigrations(*chartDir + "/value-migrations/")
+
+			migratedValues, err := pkg.Migrate(release.Config, release.Chart.Metadata.Version, nil, migrations)
 
 			if err != nil {
 				return err

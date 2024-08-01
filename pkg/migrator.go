@@ -7,6 +7,7 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"github.com/hashicorp/go-version"
 	"gopkg.in/yaml.v2"
+	"sort"
 	"strings"
 	"text/template"
 )
@@ -17,30 +18,28 @@ func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, ms
 		return nil, fmt.Errorf("no values to migrate")
 	}
 
-	fromVer, toVer, err := getVersions(vFrom, vTo)
-	if err != nil {
-		return nil, err
-	}
-
-	migrations, err := ms.GetSortedMigrations()
+	migrations, err := ms.GetMigrations()
 	if err != nil || len(migrations) == 0 {
 		return nil, cmp.Or(err, fmt.Errorf("no migrations found"))
 	}
 
-	if toVer == nil {
-		toVer = &migrations[len(migrations)-1].To
+	sort.Slice(migrations, func(i, j int) bool {
+		return migrations[i].From.LessThan(&migrations[j].From)
+	})
+
+	fromVer, toVer, err := getVersions(vFrom, vTo, migrations)
+	if err != nil {
+		return nil, err
 	}
 
 	var migratedConfig string
 
 	for _, migration := range migrations {
-
 		if migration.To.GreaterThan(toVer) {
 			break
 		}
 
 		if migration.From.GreaterThanOrEqual(fromVer) {
-
 			migrationData, err := ms.GetDataForMigration(&migration)
 
 			if err != nil {
@@ -64,7 +63,7 @@ func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, ms
 	return &migratedConfig, nil
 }
 
-func getVersions(vFrom string, vTo *string) (*version.Version, *version.Version, error) {
+func getVersions(vFrom string, vTo *string, migrations []Migration) (*version.Version, *version.Version, error) {
 	fromVerPtr, err := version.NewVersion(vFrom)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error parsing 'from' version: %v", err)
@@ -81,6 +80,10 @@ func getVersions(vFrom string, vTo *string) (*version.Version, *version.Version,
 		if fromVerPtr.GreaterThanOrEqual(toVerPtr) {
 			return nil, nil, fmt.Errorf("'from' version must be less than 'to' version")
 		}
+	}
+
+	if toVerPtr == nil {
+		toVerPtr = &migrations[len(migrations)-1].To
 	}
 
 	return fromVerPtr, toVerPtr, nil
