@@ -27,7 +27,7 @@ func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, ms
 		return migrations[i].From.LessThan(&migrations[j].From)
 	})
 
-	fromVer, toVer, err := getVersions(vFrom, vTo, migrations)
+	fromVer, toVer, err := parseVersions(vFrom, vTo, migrations)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, ms
 	return &migratedConfig, nil
 }
 
-func getVersions(vFrom string, vTo *string, migrations []Migration) (*version.Version, *version.Version, error) {
+func parseVersions(vFrom string, vTo *string, migrations []Migration) (*version.Version, *version.Version, error) {
 	fromVerPtr, err := version.NewVersion(vFrom)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error parsing 'from' version: %v", err)
