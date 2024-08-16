@@ -12,7 +12,20 @@ import (
 	"text/template"
 )
 
-func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, ms Migrations) (*string, error) {
+/*
+Test cases:
+- value/structure is removed
+- structure is changed (old structure needs to be removed)
+*/
+
+/*
+	order:
+
+- have a 'dont' migrate section
+- then transform
+- and copy across any other remaining.
+*/
+func Migrate(currentConfig map[string]interface{}, vTo *string, ms Migrations) (*string, error) {
 
 	if len(currentConfig) == 0 {
 		return nil, fmt.Errorf("no values to migrate")
@@ -24,10 +37,10 @@ func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, ms
 	}
 
 	sort.Slice(migrations, func(i, j int) bool {
-		return migrations[i].From.LessThan(&migrations[j].From)
+		return migrations[i].ToVersion.LessThan(&migrations[j].ToVersion)
 	})
 
-	fromVer, toVer, err := getVersions(vFrom, vTo, migrations)
+	toVer, err := getVersions(vTo, migrations)
 	if err != nil {
 		return nil, err
 	}
@@ -36,11 +49,8 @@ func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, ms
 
 	for _, migration := range migrations {
 
-		if migration.To.GreaterThan(toVer) {
+		if migration.ToVersion.GreaterThan(toVer) {
 			break
-		}
-		if migration.From.LessThan(fromVer) {
-			continue
 		}
 
 		migrationData, err := ms.GetDataForMigration(&migration)
@@ -65,30 +75,20 @@ func Migrate(currentConfig map[string]interface{}, vFrom string, vTo *string, ms
 	return &migratedConfig, nil
 }
 
-func getVersions(vFrom string, vTo *string, migrations []Migration) (*version.Version, *version.Version, error) {
-	fromVerPtr, err := version.NewVersion(vFrom)
-	if err != nil {
-		return nil, nil, fmt.Errorf("error parsing 'from' version: %v", err)
-	}
-
+func getVersions(vTo *string, migrations []Migration) (*version.Version, error) {
 	var toVerPtr *version.Version
+	var err error
 
-	if vTo != nil {
+	if vTo == nil {
+		toVerPtr = &migrations[len(migrations)-1].ToVersion
+	} else {
 		toVerPtr, err = version.NewVersion(*vTo)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error parsing 'to' version: %v", err)
-		}
-
-		if fromVerPtr.GreaterThanOrEqual(toVerPtr) {
-			return nil, nil, fmt.Errorf("'from' version must be less than 'to' version")
+			return nil, fmt.Errorf("error parsing 'to' version: %v", err)
 		}
 	}
 
-	if toVerPtr == nil {
-		toVerPtr = &migrations[len(migrations)-1].To
-	}
-
-	return fromVerPtr, toVerPtr, nil
+	return toVerPtr, nil
 }
 
 func apply(valuesData map[string]interface{}, migration string) ([]byte, error) {

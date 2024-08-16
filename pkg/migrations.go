@@ -29,7 +29,7 @@ func NewFileSystemMigrations(migrationsPath string) (*FileSystemMigrations, erro
 }
 
 func (migrations *FileSystemMigrations) GetDataForMigration(m *Migration) ([]byte, error) {
-	fileName := fmt.Sprintf("%s-%s.yaml", m.From.String(), m.To.String())
+	fileName := fmt.Sprintf(FilePrefix+"%s.yaml", m.ToVersion.String())
 	data, err := os.ReadFile(migrations.migrationsPath + fileName)
 	if err != nil {
 		return nil, fmt.Errorf("error reading migration: %v", err)

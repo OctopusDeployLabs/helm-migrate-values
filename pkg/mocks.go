@@ -13,7 +13,7 @@ func NewMockMigrations() *MockMigrations {
 
 func (ms *MockMigrations) AddMigrationData(m Migration, data string) {
 	ms.migrations = append(ms.migrations, m)
-	ms.migrationDataMap[m.From.String()+"-"+m.To.String()] = []byte(data)
+	ms.migrationDataMap[m.ToVersion.String()] = []byte(data)
 }
 
 func (ms *MockMigrations) GetMigrations() ([]Migration, error) {
@@ -21,5 +21,5 @@ func (ms *MockMigrations) GetMigrations() ([]Migration, error) {
 }
 
 func (ms *MockMigrations) GetDataForMigration(m *Migration) ([]byte, error) {
-	return ms.migrationDataMap[m.From.String()+"-"+m.To.String()], nil
+	return ms.migrationDataMap[m.ToVersion.String()], nil
 }

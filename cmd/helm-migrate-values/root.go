@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"gopkg.in/yaml.v2"
 	"helm-migrate-values/pkg"
 	"helm.sh/helm/v3/pkg/action"
 	"io"
@@ -104,11 +105,16 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputF
 			debug("Release has the values: %s", release.Config)
 		}
 
+		y, _ := yaml.Marshal(release.Chart.Values)
+
+		debug("release.chart.values: %s", string(y))
+		//Get all the values, both the user changed ones, and the values.yaml values from the release.
+
 		if release.Config != nil && len(release.Config) > 0 {
 
 			migrations, err := pkg.NewFileSystemMigrations(*chartDir + "/value-migrations/")
 
-			migratedValues, err := pkg.Migrate(release.Config, release.Chart.Metadata.Version, nil, migrations)
+			migratedValues, err := pkg.Migrate(release.Config, nil, migrations)
 
 			if err != nil {
 				return err

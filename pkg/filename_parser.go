@@ -3,45 +3,27 @@ package pkg
 import (
 	"fmt"
 	"github.com/hashicorp/go-version"
-	"regexp"
+	"strings"
 )
 
-// From https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string (named groups version)
-const semVerRegEx = "(?P<major>0|[1-9]\\d*)\\.(?P<minor>0|[1-9]\\d*)\\.(?P<patch>0|[1-9]\\d*)(?:-(?P<prerelease>(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?"
+const FilePrefix = "to-v"
+
+// const ExcludeFilePrefix = "exclude-to-v"
+const FileExtension = ".yaml"
 
 func parseFilenameIntoMigration(filename string) (*Migration, error) {
 
-	// Get version string from file name, eg '1.0.0-1.0.1.yaml'
-	pattern := fmt.Sprintf(`(?P<fromVersion>%s)\-(?P<toVersion>%s)\.yaml`, semVerRegEx, semVerRegEx)
-	re := regexp.MustCompile(pattern)
+	// Get version string from file name, eg 'to-v1.0.1.yaml'
+	versionString := strings.TrimPrefix(filename, FilePrefix)
+	versionString = strings.TrimSuffix(versionString, FileExtension)
 
-	matches := re.FindStringSubmatch(filename)
-	names := re.SubexpNames()
-	var from, to string
-	for i, match := range matches {
-		if names[i] == "fromVersion" {
-			from = match
-		} else if names[i] == "toVersion" {
-			to = match
-		}
-	}
-
-	fromVersion, err := version.NewVersion(from)
+	version, err := version.NewVersion(versionString)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing 'from' version '%s'': %v", from, err)
-	}
-
-	toVersion, err := version.NewVersion(to)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing 'to' version '%s': %v", to, err)
-	}
-
-	if fromVersion.GreaterThanOrEqual(toVersion) {
-		return nil, fmt.Errorf("migration 'from' versions must be less than their 'to' version")
+		return nil, fmt.Errorf("error parsing version '%s': %v", versionString, err)
 	}
 
 	return &Migration{
-		From: *fromVersion,
-		To:   *toVersion,
+		*version,
+		filename,
 	}, nil
 }

@@ -5,6 +5,6 @@ import (
 )
 
 type Migration struct {
-	From version.Version
-	To   version.Version
+	ToVersion version.Version
+	FileName  string
 }
