@@ -118,19 +118,19 @@ spec:
 
 	upAction.ReuseValues = true
 	// setting newValues and upgrading
-	res, err := upAction.Run(rel.Name, buildChart(), newValues)
+	rel2, err := upAction.Run(rel.Name, buildChart(), newValues)
 	is.NoError(err)
 
 	// Now make sure it is actually upgraded
-	updatedRes, err := upAction.cfg.Releases.Get(res.Name, 2)
+	updatedRel, err := upAction.cfg.Releases.Get(rel2.Name, 2)
 	is.NoError(err)
 
-	if updatedRes == nil {
+	if updatedRel == nil {
 		is.Fail("Updated Release is nil")
 		return
 	}
-	is.Equal(release.StatusDeployed, updatedRes.Info.Status)
-	is.Equal(expectedValues, updatedRes.Config)
+	is.Equal(release.StatusDeployed, updatedRel.Info.Status)
+	is.Equal(expectedValues, updatedRel.Config)
 
 }
 
