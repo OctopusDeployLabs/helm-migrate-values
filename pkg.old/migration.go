@@ -1,4 +1,4 @@
-package pkg
+package pkg_old
 
 import (
 	"github.com/hashicorp/go-version"

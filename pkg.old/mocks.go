@@ -1,4 +1,4 @@
-package pkg
+package pkg_old
 
 type MockMigrations struct {
 	migrations       []Migration

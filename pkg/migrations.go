@@ -2,62 +2,112 @@ package pkg
 
 import (
 	"fmt"
-	"log"
+	"iter"
+	"maps"
 	"os"
+	"strconv"
+	"strings"
 )
 
-type Migrations interface {
-	GetDataForMigration(migration *Migration) ([]byte, error)
-	GetMigrations() ([]Migration, error)
+const filePrefix = "to-v"
+
+type FileSystemMigrationSource struct {
+	BaseDir        string
+	VersionPathMap map[int]string
 }
 
-type FileSystemMigrations struct {
-	migrationsPath string
-	migrations     []Migration
-}
-
-func NewFileSystemMigrations(migrationsPath string) (*FileSystemMigrations, error) {
-	migrations, err := loadMigrations(migrationsPath)
+func NewFileSystemMigrationSource(dir string) (*FileSystemMigrationSource, error) {
+	// load migration data from dir
+	md, err := loadMigrationMetadata(dir)
 	if err != nil {
-		return nil, fmt.Errorf("error reading migrations: %v", err)
+		return nil, err
 	}
 
-	return &FileSystemMigrations{
-		migrationsPath: migrationsPath,
-		migrations:     migrations,
+	return &FileSystemMigrationSource{
+		BaseDir:        dir,
+		VersionPathMap: md,
 	}, nil
 }
 
-func (migrations *FileSystemMigrations) GetDataForMigration(m *Migration) ([]byte, error) {
-	fileName := fmt.Sprintf(FilePrefix+"%s.yaml", m.ToVersion.String())
-	data, err := os.ReadFile(migrations.migrationsPath + fileName)
-	if err != nil {
-		return nil, fmt.Errorf("error reading migration: %v", err)
-	}
-	return data, nil
+type FileSystemMigrationMeta struct {
+	ToVersion int
+	Path      string
 }
 
-func (migrations *FileSystemMigrations) GetMigrations() ([]Migration, error) {
-	return migrations.migrations, nil
+type Migration struct {
+	ToVersion int
+	Data      string
 }
 
-func loadMigrations(migrationsPath string) ([]Migration, error) {
-
-	migrationFiles, err := os.ReadDir(migrationsPath)
+func loadMigrationMetadata(dir string) (map[int]string, error) {
+	migrationFiles, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, fmt.Errorf("error reading migrations directory: %v", err)
 	}
 
-	ms := make([]Migration, 0, len(migrationFiles))
+	//ms := make([]FileSystemMigrationMeta, 0, len(migrationFiles))
+	versionPathMap := make(map[int]string)
 
 	for _, file := range migrationFiles {
-		migration, err := parseFilenameIntoMigration(file.Name())
+		// TODO: handle this:
+		//		if file.IsDir() {
+		//			continue
+		//		}
+		ver, err := strconv.Atoi(strings.TrimLeft(file.Name(), filePrefix))
 		if err != nil {
-			log.Fatal(err)
+			return nil, fmt.Errorf("error parsing version from '%s': %v", file.Name(), err)
 		}
 
-		ms = append(ms, *migration)
+		versionPathMap[ver] = file.Name()
 	}
 
-	return ms, nil
+	return versionPathMap, nil
+}
+
+type MigrationSource interface {
+	GetTemplateFor(v int) (string, error)
+	GetVersions() iter.Seq[int]
+}
+
+func (f *FileSystemMigrationSource) GetTemplateFor(v int) (string, error) {
+	filePath := f.VersionPathMap[v]
+	if filePath == "" {
+		return "", fmt.Errorf("no migration found for version %d", v)
+	}
+
+	//Load template from filesystem
+	mTemplate, err := os.ReadFile(f.BaseDir + filePath)
+	if err != nil {
+		return "", fmt.Errorf("error reading migration template: %v", err)
+	}
+
+	return string(mTemplate), nil
+}
+
+func (f *FileSystemMigrationSource) GetVersions() iter.Seq[int] {
+	return maps.Keys(f.VersionPathMap)
+}
+
+type MockMigrationSource struct {
+	VersionDataMap map[int]string
+}
+
+func (m *MockMigrationSource) GetTemplateFor(v int) (string, error) {
+	data, ok := m.VersionDataMap[v]
+	if !ok {
+		return "", fmt.Errorf("no migration found for version %d", v)
+	}
+
+	return data, nil
+}
+
+func (m *MockMigrationSource) GetVersions() iter.Seq[int] {
+	return maps.Keys(m.VersionDataMap)
+}
+
+func (m *MockMigrationSource) AddMigrationData(v int, data string) {
+	if m.VersionDataMap == nil {
+		m.VersionDataMap = make(map[int]string)
+	}
+	m.VersionDataMap[v] = data
 }

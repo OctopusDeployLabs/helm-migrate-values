@@ -1,4 +1,4 @@
-package pkg
+package pkg_old
 
 import (
 	"fmt"
