@@ -6,7 +6,6 @@ import (
 	"gopkg.in/yaml.v2"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
-	"helm.sh/helm/v3/pkg/chartutil"
 	kubefake "helm.sh/helm/v3/pkg/kube/fake"
 	"helm.sh/helm/v3/pkg/registry"
 	"helm.sh/helm/v3/pkg/release"
@@ -85,22 +84,19 @@ myKey: null
 	install := action.NewInstall(config)
 	install.ReleaseName = "release-1"
 
-	cfgMap, err := yamlUnmarshal(t, customValuesV1)
+	cfgMap, err := YamlUnmarshal(customValuesV1)
 	req.NoError(err, "Error unmarshalling custom values")
 
 	rel1, err := install.Run(chV1, cfgMap)
 	req.NoError(err, "Error installing chart v1")
 
 	//Make a migration
-	ms := &MockMigrationSource{}
+	ms := &MemoryMigrationSource{}
 	ms.AddMigrationData(2, migration)
 
 	// Migrate the release user values (config)
 	migratedValues, err := Migrate(rel1.Config, nil, ms)
 	req.NoError(err, "Error migrating values")
-
-	migratedValuesMap, err := yamlUnmarshal(t, *migratedValues)
-	req.NoError(err, "Error unmarshalling migrated values")
 
 	// Create a new chart using the default values v2 and template v2
 	// apply migrated values to the new chart
@@ -119,7 +115,7 @@ myKey: null
 	upAction := action.NewUpgrade(config)
 	upAction.ResetThenReuseValues = true
 
-	rel2, err := upAction.Run(rel1.Name, chV2, migratedValuesMap)
+	rel2, err := upAction.Run(rel1.Name, chV2, migratedValues)
 	req.NoError(err, "Error upgrading chart")
 	req.NotNil(rel2, "Release was not created")
 
@@ -130,12 +126,9 @@ myKey: null
 	updatedRel, err := config.Releases.Get(rel2.Name, 2)
 	req.NoError(err, "Error getting updated release")
 
-	if updatedRel == nil {
-		assert.Fail(t, "Updated Release is nil")
-		return
-	}
+	req.NotNil(updatedRel, "Updated Release is nil")
 
-	assert.Equal(t, release.StatusDeployed, updatedRel.Info.Status)
+	is.Equal(t, release.StatusDeployed, updatedRel.Info.Status)
 
 	updatedVals, _ := yaml.Marshal(updatedRel.Config)
 	t.Log(string(updatedVals))
@@ -143,11 +136,10 @@ myKey: null
 
 }
 
-func yamlUnmarshal(t *testing.T, customValuesV1 string) (map[string]interface{}, error) {
+func YamlUnmarshal(customValuesV1 string) (map[string]interface{}, error) {
 	var cfgMap map[string]interface{}
 	err := yaml.Unmarshal([]byte(customValuesV1), &cfgMap)
 	if err != nil {
-		t.Errorf("Error unmarshalling default values: %v", err)
 		return nil, err
 	}
 	return cfgMap, nil
@@ -162,12 +154,10 @@ func actionConfigFixture(t *testing.T) *action.Configuration {
 		t.Fatal(err)
 	}
 
-	releases := storage.Init(driver.NewMemory())
-
 	return &action.Configuration{
-		Releases:       releases,
-		KubeClient:     &kubefake.PrintingKubeClient{Out: &LogWriter{}}, //&kubefake.FailingKubeClient{PrintingKubeClient: kubefake.PrintingKubeClient{Out: io.Discard}},
-		Capabilities:   chartutil.DefaultCapabilities,
+		Releases:   storage.Init(driver.NewMemory()),
+		KubeClient: &kubefake.PrintingKubeClient{Out: &LogWriter{}},
+		//Capabilities:   chartutil.DefaultCapabilities,
 		RegistryClient: registryClient,
 		Log: func(format string, v ...interface{}) {
 			t.Helper()

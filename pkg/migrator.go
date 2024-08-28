@@ -10,13 +10,11 @@ import (
 	"text/template"
 )
 
-func MigrateFromFiles(currentConfig map[string]interface{}, vTo *int, migrationsDir string) (*string, error) {
+func MigrateFromFiles(currentConfig map[string]interface{}, vTo *int, migrationsDir string) (map[string]interface{}, error) {
 
-	// I don't think this is correct - we might need to set new values? e.g. like we did with targets in v2
-	/*
-		if len(currentConfig) == 0 {
-			return nil, fmt.Errorf("no values to migrate")
-		} */
+	if len(currentConfig) == 0 {
+		return currentConfig, nil
+	}
 
 	ms, err := NewFileSystemMigrationSource(migrationsDir)
 	if err != nil {
@@ -26,15 +24,15 @@ func MigrateFromFiles(currentConfig map[string]interface{}, vTo *int, migrations
 	return Migrate(currentConfig, vTo, ms)
 }
 
-func Migrate(currentConfig map[string]interface{}, vTo *int, ms MigrationSource) (*string, error) {
+func Migrate(currentConfig map[string]interface{}, vTo *int, ms MigrationSource) (map[string]interface{}, error) {
 
 	versions := slices.Sorted(ms.GetVersions())
 
 	if len(versions) == 0 {
-		return nil, fmt.Errorf("no migrations found")
+		return currentConfig, nil
 	}
 
-	var migratedConfig string
+	migratedConfig := currentConfig
 
 	for _, version := range versions {
 		if vTo != nil && version > *vTo {
@@ -46,35 +44,34 @@ func Migrate(currentConfig map[string]interface{}, vTo *int, ms MigrationSource)
 			return nil, fmt.Errorf("error reading migration template: %v", err)
 		}
 
-		currentValues, err := apply(currentConfig, mTemplate)
+		migratedConfig, err = apply(migratedConfig, mTemplate)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error applying migration: %v", err)
 		}
-
-		err = yaml.Unmarshal(currentValues, &currentConfig)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing migrated yaml values in v%d: %v", version, err)
-		}
-		migratedConfig = string(currentValues)
 	}
 
-	return &migratedConfig, nil
+	return migratedConfig, nil
 }
 
-func apply(valuesData map[string]interface{}, mTemplate string) ([]byte, error) {
+func apply(valuesData map[string]interface{}, mTemplate string) (map[string]interface{}, error) {
 	parsedTemplate, err := template.New("migration").Funcs(extraFuncs()).Parse(mTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing migration template: %v", err)
 	}
 
 	var renderedMigrationBuf bytes.Buffer
-
 	err = parsedTemplate.Execute(&renderedMigrationBuf, valuesData)
 	if err != nil {
 		return nil, fmt.Errorf("error executing migration template: %v", err)
 	}
 
-	return renderedMigrationBuf.Bytes(), nil
+	var migratedConfig map[string]interface{}
+	err = yaml.Unmarshal(renderedMigrationBuf.Bytes(), &migratedConfig)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing migrated yaml values %v", err)
+	}
+
+	return migratedConfig, nil
 }
 
 // Modified from https://github.com/helm/helm/blob/2feac15cc3252c97c997be2ced1ab8afe314b429/pkg/engine/funcs.go#L43
@@ -99,14 +96,3 @@ func quoteEach(s []interface{}) (string, error) {
 	}
 	return strings.Join(quoted, ", "), nil
 }
-
-/*
-
-	migrations, err := ms.GetMigrations()
-	if err != nil || len(migrations) == 0 {
-		return nil, cmp.Or(err, fmt.Errorf("no migrations found"))
-	}
-
-	sort.Slice(migrations, func(i, j int) bool {
-		return migrations[i].ToVersion.LessThan(&migrations[j].ToVersion)
-	})                */

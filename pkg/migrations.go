@@ -45,7 +45,6 @@ func loadMigrationMetadata(dir string) (map[int]string, error) {
 		return nil, fmt.Errorf("error reading migrations directory: %v", err)
 	}
 
-	//ms := make([]FileSystemMigrationMeta, 0, len(migrationFiles))
 	versionPathMap := make(map[int]string)
 
 	for _, file := range migrationFiles {
@@ -88,11 +87,11 @@ func (f *FileSystemMigrationSource) GetVersions() iter.Seq[int] {
 	return maps.Keys(f.VersionPathMap)
 }
 
-type MockMigrationSource struct {
+type MemoryMigrationSource struct {
 	VersionDataMap map[int]string
 }
 
-func (m *MockMigrationSource) GetTemplateFor(v int) (string, error) {
+func (m *MemoryMigrationSource) GetTemplateFor(v int) (string, error) {
 	data, ok := m.VersionDataMap[v]
 	if !ok {
 		return "", fmt.Errorf("no migration found for version %d", v)
@@ -101,11 +100,11 @@ func (m *MockMigrationSource) GetTemplateFor(v int) (string, error) {
 	return data, nil
 }
 
-func (m *MockMigrationSource) GetVersions() iter.Seq[int] {
+func (m *MemoryMigrationSource) GetVersions() iter.Seq[int] {
 	return maps.Keys(m.VersionDataMap)
 }
 
-func (m *MockMigrationSource) AddMigrationData(v int, data string) {
+func (m *MemoryMigrationSource) AddMigrationData(v int, data string) {
 	if m.VersionDataMap == nil {
 		m.VersionDataMap = make(map[int]string)
 	}
