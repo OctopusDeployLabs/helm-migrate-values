@@ -42,7 +42,7 @@ type Migration struct {
 func loadMigrationMetadata(dir string) (map[int]string, error) {
 	migrationFiles, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, fmt.Errorf("error reading migrations directory: %v", err)
+		return nil, fmt.Errorf("error reading migrations directory: %w", err)
 	}
 
 	versionPathMap := make(map[int]string)
@@ -54,7 +54,7 @@ func loadMigrationMetadata(dir string) (map[int]string, error) {
 		//		}
 		ver, err := strconv.Atoi(strings.TrimLeft(file.Name(), filePrefix))
 		if err != nil {
-			return nil, fmt.Errorf("error parsing version from '%s': %v", file.Name(), err)
+			return nil, fmt.Errorf("error parsing version from '%s': %w", file.Name(), err)
 		}
 
 		versionPathMap[ver] = file.Name()
@@ -74,10 +74,9 @@ func (f *FileSystemMigrationSource) GetTemplateFor(v int) (string, error) {
 		return "", fmt.Errorf("no migration found for version %d", v)
 	}
 
-	//Load template from filesystem
 	mTemplate, err := os.ReadFile(f.BaseDir + filePath)
 	if err != nil {
-		return "", fmt.Errorf("error reading migration template: %v", err)
+		return "", fmt.Errorf("error reading migration template: %w", err)
 	}
 
 	return string(mTemplate), nil

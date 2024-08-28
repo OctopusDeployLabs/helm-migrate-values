@@ -10,7 +10,7 @@ import (
 	"text/template"
 )
 
-func MigrateFromFiles(currentConfig map[string]interface{}, vTo *int, migrationsDir string) (map[string]interface{}, error) {
+func MigrateFromPath(currentConfig map[string]interface{}, vTo *int, migrationsDir string) (map[string]interface{}, error) {
 
 	if len(currentConfig) == 0 {
 		return currentConfig, nil
@@ -18,7 +18,7 @@ func MigrateFromFiles(currentConfig map[string]interface{}, vTo *int, migrations
 
 	ms, err := NewFileSystemMigrationSource(migrationsDir)
 	if err != nil {
-		return nil, fmt.Errorf("error creating migration source: %v", err)
+		return nil, fmt.Errorf("error creating migration source: %w", err)
 	}
 
 	return Migrate(currentConfig, vTo, ms)
@@ -41,12 +41,12 @@ func Migrate(currentConfig map[string]interface{}, vTo *int, ms MigrationSource)
 
 		mTemplate, err := ms.GetTemplateFor(version)
 		if err != nil {
-			return nil, fmt.Errorf("error reading migration template: %v", err)
+			return nil, fmt.Errorf("error retrieving migration template: %w", err)
 		}
 
 		migratedConfig, err = apply(migratedConfig, mTemplate)
 		if err != nil {
-			return nil, fmt.Errorf("error applying migration: %v", err)
+			return nil, fmt.Errorf("error applying migration: %w", err)
 		}
 	}
 
@@ -56,19 +56,19 @@ func Migrate(currentConfig map[string]interface{}, vTo *int, ms MigrationSource)
 func apply(valuesData map[string]interface{}, mTemplate string) (map[string]interface{}, error) {
 	parsedTemplate, err := template.New("migration").Funcs(extraFuncs()).Parse(mTemplate)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing migration template: %v", err)
+		return nil, fmt.Errorf("error parsing migration template: %w", err)
 	}
 
 	var renderedMigrationBuf bytes.Buffer
 	err = parsedTemplate.Execute(&renderedMigrationBuf, valuesData)
 	if err != nil {
-		return nil, fmt.Errorf("error executing migration template: %v", err)
+		return nil, fmt.Errorf("error executing migration template: %w", err)
 	}
 
 	var migratedConfig map[string]interface{}
 	err = yaml.Unmarshal(renderedMigrationBuf.Bytes(), &migratedConfig)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing migrated yaml values %v", err)
+		return nil, fmt.Errorf("error parsing migrated yaml values %w", err)
 	}
 
 	return migratedConfig, nil

@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v2"
-	"helm-migrate-values/pkg.old"
+	"helm-migrate-values/pkg"
 	"helm.sh/helm/v3/pkg/action"
 	"io"
 	"os"
@@ -112,12 +112,14 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputF
 
 		if release.Config != nil && len(release.Config) > 0 {
 
-			migrations, err := pkg_old.NewFileSystemMigrations(*chartDir + "/value-migrations/")
-
-			migratedValues, err := pkg_old.Migrate(release.Config, nil, migrations)
-
+			migratedConfig, err := pkg.MigrateFromPath(release.Config, nil, *chartDir+"/value-migrations/")
 			if err != nil {
 				return err
+			}
+
+			migratedValues, err := yaml.Marshal(migratedConfig)
+			if err != nil {
+				return fmt.Errorf("migrated values are in an invalid format: %w", err)
 			}
 
 			println(*migratedValues)
