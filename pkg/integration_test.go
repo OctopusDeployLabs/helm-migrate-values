@@ -5,7 +5,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/chart/loader"
+	"helm.sh/helm/v3/pkg/chartutil"
 	kubefake "helm.sh/helm/v3/pkg/kube/fake"
 	"helm.sh/helm/v3/pkg/registry"
 	"helm.sh/helm/v3/pkg/release"
@@ -19,69 +20,34 @@ func TestMigrator_IntegrationTests(t *testing.T) {
 	is := assert.New(t)
 	req := require.New(t)
 
-	defaultValuesV1 := `agent:
-  targetEnvironments: []`
-
 	customValuesV1 := `myKey: "myValue"
 agent:
   targetEnvironments: ["Development", "Test", "Prod"]`
 
-	templateV1 := `apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: "this-chart"
-  namespace: {{ .Release.Namespace | quote }}
-spec:
-  template:
-    spec:
-      containers:
-        - name: {{ .Chart.Name }}
-          roles:
-          - name: "TargetRole"
-          value: {{ join "," .Values.agent.targetRoles | quote }}
-          env:
-          - name: "TargetEnvironment"
-          value: {{ join "," .Values.agent.targetEnvironments | quote }}`
-
-	defaultValuesV2 := `agent:
-  target:
-    environments: []`
-
-	templateV2 := `apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: "this-chart"
-  namespace: {{ .Release.Namespace | quote }}
-spec:
-  template:
-    spec:
-      containers:
-        - name: {{ .Chart.Name }}
-          env:
-          target:
-            environments: [{{ .Values.agent.target.environments}}]`
+	chartV1Path := "test-charts/v1/"
+	chartV2Path := "test-charts/v2/"
 
 	migration := `agent:
-  target:
-    environments: [{{ .agent.targetEnvironments | quoteEach | join ","}}]
+  deploymentTarget:
+    initial:
+      environments: [{{ .agent.targetEnvironments | quoteEach | join ","}}]
 myKey: null
 `
+	expected := `agent:
+  deploymentTarget:
+    initial:
+      environments:
+      - Development
+      - Test
+      - Prod
+`
 
-	// Make a chart, using  template v1  and default values v1
-	chV1 := &chart.Chart{
-		Metadata: &chart.Metadata{
-			APIVersion: chart.APIVersionV1,
-			Name:       "testUpgradeChart",
-			Version:    "1.0.0",
-		},
-		Templates: []*chart.File{
-			{Name: "templates/deployment.yaml", Data: []byte(templateV1)},
-			{Name: "values.yaml", Data: []byte(defaultValuesV1)},
-		},
-	}
+	chV1, err := loader.Load(chartV1Path)
+	req.NoError(err, "Error loading chart v1")
 
 	config := actionConfigFixture(t)
 	install := action.NewInstall(config)
+	install.Namespace = "default"
 	install.ReleaseName = "release-1"
 
 	cfgMap, err := YamlUnmarshal(customValuesV1)
@@ -100,17 +66,8 @@ myKey: null
 
 	// Create a new chart using the default values v2 and template v2
 	// apply migrated values to the new chart
-	chV2 := &chart.Chart{
-		Metadata: &chart.Metadata{
-			APIVersion: chart.APIVersionV1,
-			Name:       "testUpgradeChart",
-			Version:    "2.0.0",
-		},
-		Templates: []*chart.File{
-			{Name: "templates/deployment.yaml", Data: []byte(templateV2)},
-			{Name: "values.yaml", Data: []byte(defaultValuesV2)},
-		},
-	}
+	chV2, err := loader.Load(chartV2Path)
+	req.NoError(err, "Error loading chart v2")
 
 	upAction := action.NewUpgrade(config)
 	upAction.ResetThenReuseValues = true
@@ -128,12 +85,11 @@ myKey: null
 
 	req.NotNil(updatedRel, "Updated Release is nil")
 
-	is.Equal(t, release.StatusDeployed, updatedRel.Info.Status)
+	is.Equal(release.StatusDeployed, updatedRel.Info.Status)
 
 	updatedVals, _ := yaml.Marshal(updatedRel.Config)
-	t.Log(string(updatedVals))
-	//	assert.Equal(t, expectedValues, updatedRel.Config)
 
+	is.Equal(expected, string(updatedVals))
 }
 
 func YamlUnmarshal(customValuesV1 string) (map[string]interface{}, error) {
@@ -155,9 +111,9 @@ func actionConfigFixture(t *testing.T) *action.Configuration {
 	}
 
 	return &action.Configuration{
-		Releases:   storage.Init(driver.NewMemory()),
-		KubeClient: &kubefake.PrintingKubeClient{Out: &LogWriter{}},
-		//Capabilities:   chartutil.DefaultCapabilities,
+		Releases:       storage.Init(driver.NewMemory()),
+		KubeClient:     &kubefake.PrintingKubeClient{Out: &LogWriter{}},
+		Capabilities:   chartutil.DefaultCapabilities,
 		RegistryClient: registryClient,
 		Log: func(format string, v ...interface{}) {
 			t.Helper()

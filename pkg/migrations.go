@@ -17,7 +17,7 @@ type FileSystemMigrationSource struct {
 }
 
 func NewFileSystemMigrationSource(dir string) (*FileSystemMigrationSource, error) {
-	// load migration data from dir
+
 	md, err := loadMigrationMetadata(dir)
 	if err != nil {
 		return nil, err
@@ -48,10 +48,9 @@ func loadMigrationMetadata(dir string) (map[int]string, error) {
 	versionPathMap := make(map[int]string)
 
 	for _, file := range migrationFiles {
-		// TODO: handle this:
-		//		if file.IsDir() {
-		//			continue
-		//		}
+		if file.IsDir() {
+			continue
+		}
 		ver, err := strconv.Atoi(strings.TrimLeft(file.Name(), filePrefix))
 		if err != nil {
 			return nil, fmt.Errorf("error parsing version from '%s': %w", file.Name(), err)

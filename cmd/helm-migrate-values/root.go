@@ -8,6 +8,7 @@ import (
 	"helm-migrate-values/pkg"
 	"helm.sh/helm/v3/pkg/action"
 	"io"
+	"log"
 	"os"
 )
 
@@ -108,7 +109,6 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputF
 		y, _ := yaml.Marshal(release.Chart.Values)
 
 		debug("release.chart.values: %s", string(y))
-		//Get all the values, both the user changed ones, and the values.yaml values from the release.
 
 		if release.Config != nil && len(release.Config) > 0 {
 
@@ -122,11 +122,36 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputF
 				return fmt.Errorf("migrated values are in an invalid format: %w", err)
 			}
 
-			println(*migratedValues)
-			//TODO: Output the result or save to a file location
-			return err
+			if err = writeOutputValues(err, outputFile, migratedValues); err != nil {
+				return err
+			}
 		}
 
 		return nil
 	}
+}
+
+func writeOutputValues(err error, outputFile string, migratedValues []byte) error {
+	f, err := os.Create(outputFile)
+	if err != nil {
+		return fmt.Errorf("error creating output values file: %w", err)
+	}
+
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			log.Fatal(fmt.Errorf("error closing output values file: %w", err))
+		}
+	}(f)
+
+	_, err = f.Write(migratedValues)
+	if err != nil {
+		return fmt.Errorf("error writing migrated values to output values file: %w", err)
+	}
+
+	if err = f.Sync(); err != nil {
+		return fmt.Errorf("error writing migrated values to output values file: %w", err)
+	}
+
+	return nil
 }
