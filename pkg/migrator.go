@@ -81,6 +81,7 @@ func extraFuncs() template.FuncMap {
 	delete(f, "expandenv")
 
 	f["quoteEach"] = quoteEach
+	f["toYaml"] = toYaml
 
 	return f
 }
@@ -95,4 +96,9 @@ func quoteEach(s []interface{}) (string, error) {
 		quoted = append(quoted, fmt.Sprintf("%q", str))
 	}
 	return strings.Join(quoted, ", "), nil
+}
+
+func toYaml(t any) string {
+	result, _ := yaml.Marshal(t)
+	return string(result)
 }

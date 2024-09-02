@@ -10,6 +10,7 @@ import (
 )
 
 const filePrefix = "to-v"
+const fileExtension = ".yaml"
 
 type FileSystemMigrationSource struct {
 	BaseDir        string
@@ -48,10 +49,10 @@ func loadMigrationMetadata(dir string) (map[int]string, error) {
 	versionPathMap := make(map[int]string)
 
 	for _, file := range migrationFiles {
-		if file.IsDir() {
+		if file.IsDir() || !strings.HasPrefix(file.Name(), filePrefix) || !strings.HasSuffix(file.Name(), fileExtension) {
 			continue
 		}
-		ver, err := strconv.Atoi(strings.TrimLeft(file.Name(), filePrefix))
+		ver, err := strconv.Atoi(strings.TrimRight(strings.TrimLeft(file.Name(), filePrefix), fileExtension))
 		if err != nil {
 			return nil, fmt.Errorf("error parsing version from '%s': %w", file.Name(), err)
 		}

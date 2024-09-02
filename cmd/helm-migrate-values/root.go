@@ -22,10 +22,10 @@ e.g.
 The migration is defined as a series of schema transformations using Go Templating in the form of YAML files. These YAML files
 should be stored in the chart itself as:
 
-	{CHART_DIR}/value-migrations/{VERSION_FROM}-{VERSION_TO}.yaml
+	{CHART_DIR}/value-migrations/to-v{VERSION_TO}.yaml
 
 		CHART_DIR is directory in which the Helm chart is defined
-		VERSION_FROM and VERSION_TO represent the versions of the values schemas. These should use the same versioning as the chart itself.
+		VERSION_TO represents the major version of the values schema. These should use the same versioning as the chart itself.
 
 Arguments:
   RELEASE
@@ -54,13 +54,13 @@ func newRootCmd(actionConfig *action.Configuration, out io.Writer, args []string
 	flags.StringVarP(&outputFile, "output-file", "o", "",
 		"The output file to which the result is saved. Standard output is used if this option is not set.")
 
-	runner := newRunner(actionConfig, flags, outputFile)
+	runner := newRunner(actionConfig, flags, &outputFile)
 	cmd.RunE = runner
 
 	return cmd, nil
 }
 
-func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputFile string) func(cmd *cobra.Command, args []string) error {
+func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputFile *string) func(cmd *cobra.Command, args []string) error {
 	// We use the install action for locating the chart
 	var installAction = action.NewInstall(actionConfig)
 	var listAction = action.NewList(actionConfig)
@@ -106,10 +106,6 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputF
 			debug("Release has the values: %s", release.Config)
 		}
 
-		y, _ := yaml.Marshal(release.Chart.Values)
-
-		debug("release.chart.values: %s", string(y))
-
 		if release.Config != nil && len(release.Config) > 0 {
 
 			migratedConfig, err := pkg.MigrateFromPath(release.Config, nil, *chartDir+"/value-migrations/")
@@ -122,7 +118,7 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputF
 				return fmt.Errorf("migrated values are in an invalid format: %w", err)
 			}
 
-			if err = writeOutputValues(err, outputFile, migratedValues); err != nil {
+			if err = writeOutputValues(err, *outputFile, migratedValues); err != nil {
 				return err
 			}
 		}
