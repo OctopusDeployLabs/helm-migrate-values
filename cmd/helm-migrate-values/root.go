@@ -54,13 +54,13 @@ func newRootCmd(actionConfig *action.Configuration, out io.Writer, args []string
 	flags.StringVarP(&outputFile, "output-file", "o", "",
 		"The output file to which the result is saved. Standard output is used if this option is not set.")
 
-	runner := newRunner(actionConfig, flags, &outputFile)
+	runner := newRunner(actionConfig, flags, out, &outputFile)
 	cmd.RunE = runner
 
 	return cmd, nil
 }
 
-func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputFile *string) func(cmd *cobra.Command, args []string) error {
+func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, out io.Writer, outputFile *string) func(cmd *cobra.Command, args []string) error {
 	// We use the install action for locating the chart
 	var installAction = action.NewInstall(actionConfig)
 	var listAction = action.NewList(actionConfig)
@@ -118,8 +118,15 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputF
 				return fmt.Errorf("migrated values are in an invalid format: %w", err)
 			}
 
-			if err = writeOutputValues(err, *outputFile, migratedValues); err != nil {
-				return err
+			if *outputFile == "" {
+				message := fmt.Sprintf("Migrated values for release %s:\n%s", name, string(migratedValues))
+				if _, err = fmt.Fprint(out, message); err != nil {
+					return fmt.Errorf("error writing migrated values to standard output: %w", err)
+				}
+			} else {
+				if err = writeOutputValues(err, *outputFile, migratedValues); err != nil {
+					return err
+				}
 			}
 		}
 
