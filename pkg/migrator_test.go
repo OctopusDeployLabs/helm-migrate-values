@@ -99,28 +99,48 @@ var versionConfigs = map[int]map[string]interface{}{
 	4: version4Config,
 }
 
-var migrationData = map[int]string{
+var migrationData = map[int]map[string]interface{}{
 	3: version3Migration,
 	4: version4Migration,
 }
 
-var version1Config, _ = yamlUnmarshal(`agent:
-  targetEnvironment: "test"`)
+var version1Config = map[string]interface{}{
+	"agent": map[interface{}]interface{}{
+		"targetEnvironment": "test",
+	},
+}
 
 // Has no migration (realistically not going to happen in practice)
-var version2Config, _ = yamlUnmarshal(`agent:
-  targetEnvironment: "test"`)
+var version2Config = map[string]interface{}{
+	"agent": map[interface{}]interface{}{
+		"targetEnvironment": "test",
+	},
+}
 
-var version3Config, _ = yamlUnmarshal(`agent:
-  targetEnvironments: ["test"]`)
+var version3Config = map[string]interface{}{
+	"agent": map[interface{}]interface{}{
+		"targetEnvironments": []interface{}{"test"},
+	},
+}
 
-var version4Config, _ = yamlUnmarshal(`agent:
-  target:
-    environments: ["test"]`)
+var version4Config = map[string]interface{}{
+	"agent": map[interface{}]interface{}{
+		"target": map[interface{}]interface{}{
+			"environments": []interface{}{"test"},
+		},
+	},
+}
 
-var version3Migration = `agent:
-  targetEnvironments: [{{ .agent.targetEnvironment | quote }}]`
+var version3Migration = map[string]interface{}{
+	"agent": map[interface{}]interface{}{
+		"targetEnvironments": []string{"{{ .agent.targetEnvironment }}"},
+	},
+}
 
-var version4Migration = `agent:
-  target:
-    environments: [{{ .agent.targetEnvironments | quoteEach | join "," }}]`
+var version4Migration = map[string]interface{}{
+	"agent": map[interface{}]interface{}{
+		"target": map[interface{}]interface{}{
+			"environments": []string{"{{ .agent.targetEnvironments | join \",\" }}"},
+		},
+	},
+}

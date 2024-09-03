@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"iter"
 	"maps"
 	"os"
@@ -37,7 +38,7 @@ type FileSystemMigrationMeta struct {
 
 type Migration struct {
 	ToVersion int
-	Data      string
+	Data      map[string]interface{}
 }
 
 func loadMigrationMetadata(dir string) (map[int]string, error) {
@@ -103,9 +104,12 @@ func (m *MemoryMigrationSource) GetVersions() iter.Seq[int] {
 	return maps.Keys(m.VersionDataMap)
 }
 
-func (m *MemoryMigrationSource) AddMigrationData(v int, data string) {
+func (m *MemoryMigrationSource) AddMigrationData(v int, data map[string]interface{}) {
 	if m.VersionDataMap == nil {
 		m.VersionDataMap = make(map[int]string)
 	}
-	m.VersionDataMap[v] = data
+
+	dataM, _ := yaml.Marshal(data)
+
+	m.VersionDataMap[v] = string(dataM)
 }

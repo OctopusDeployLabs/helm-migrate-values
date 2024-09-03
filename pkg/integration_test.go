@@ -3,7 +3,6 @@ package pkg
 import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v2"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/release"
@@ -14,27 +13,36 @@ func TestMigrator_IntegrationTests(t *testing.T) {
 	is := assert.New(t)
 	req := require.New(t)
 
-	customValuesV1 := `myKey: "myValue"
-agent:
-  targetEnvironments: ["Development", "Test", "Prod"]`
+	customValues := map[string]interface{}{
+		"myKey": "myValue",
+		"agent": map[string]interface{}{
+			"targetEnvironments": []interface{}{"Development", "Test", "Prod"},
+		},
+	}
 
 	chartV1Path := "test-charts/v1/" // Note that these aren't necessarily valid charts, they're just what we need for testing.
 	chartV2Path := "test-charts/v2/"
 
-	migration := `agent:
-  deploymentTarget:
-    initial:
-      environments: [{{ .agent.targetEnvironments | quoteEach | join ","}}]
-myKey: null
-`
-	expected := `agent:
-  deploymentTarget:
-    initial:
-      environments:
-      - Development
-      - Test
-      - Prod
-`
+	migration := map[string]interface{}{
+		"agent": map[string]interface{}{
+			"deploymentTarget": map[string]interface{}{
+				"initial": map[string]interface{}{
+					"environments": []string{"Development", "Test", "Prod"},
+				},
+			},
+		},
+		"myKey": nil,
+	}
+
+	expected := map[string]interface{}{
+		"agent": map[interface{}]interface{}{
+			"deploymentTarget": map[interface{}]interface{}{
+				"initial": map[interface{}]interface{}{
+					"environments": []interface{}{"Development", "Test", "Prod"},
+				},
+			},
+		},
+	}
 
 	// Load v1 chart
 	chV1, err := loader.Load(chartV1Path)
@@ -46,10 +54,7 @@ myKey: null
 	install.ReleaseName = "release-1"
 
 	// Install the v1 chart with the custom values
-	cfgMap, err := yamlUnmarshal(customValuesV1)
-	req.NoError(err, "Error unmarshalling custom values")
-
-	rel1, err := install.Run(chV1, cfgMap)
+	rel1, err := install.Run(chV1, customValues)
 	req.NoError(err, "Error installing chart v1")
 
 	// Make a migration
@@ -78,8 +83,5 @@ myKey: null
 	req.NotNil(updatedRel, "Updated Release is nil")
 
 	is.Equal(release.StatusDeployed, updatedRel.Info.Status)
-
-	updatedVals, _ := yaml.Marshal(updatedRel.Config)
-
-	is.Equal(expected, string(updatedVals))
+	is.Equal(expected, updatedRel.Config)
 }
