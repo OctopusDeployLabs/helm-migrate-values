@@ -104,17 +104,17 @@ var migrationData = map[int]string{
 	4: version4Migration,
 }
 
-var version1Config, _ = YamlUnmarshal(`agent:
+var version1Config, _ = yamlUnmarshal(`agent:
   targetEnvironment: "test"`)
 
 // Has no migration (realistically not going to happen in practice)
-var version2Config, _ = YamlUnmarshal(`agent:
+var version2Config, _ = yamlUnmarshal(`agent:
   targetEnvironment: "test"`)
 
-var version3Config, _ = YamlUnmarshal(`agent:
+var version3Config, _ = yamlUnmarshal(`agent:
   targetEnvironments: ["test"]`)
 
-var version4Config, _ = YamlUnmarshal(`agent:
+var version4Config, _ = yamlUnmarshal(`agent:
   target:
     environments: ["test"]`)
 
