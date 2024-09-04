@@ -5,16 +5,19 @@ import (
 	"fmt"
 	"github.com/Masterminds/sprig/v3"
 	"gopkg.in/yaml.v2"
+	"helm-migrate-values/internal"
 	"slices"
 	"strings"
 	"text/template"
 )
 
-func MigrateFromPath(currentConfig map[string]interface{}, vTo *int, migrationsDir string) (map[string]interface{}, error) {
+func MigrateFromPath(currentConfig map[string]interface{}, vTo *int, migrationsDir string, log *internal.Logger) (map[string]interface{}, error) {
 
 	if len(currentConfig) == 0 {
 		return currentConfig, nil
 	}
+
+	log.Debug("Migrating values from path: %s", migrationsDir)
 
 	ms, err := NewFileSystemMigrationSource(migrationsDir)
 	if err != nil {

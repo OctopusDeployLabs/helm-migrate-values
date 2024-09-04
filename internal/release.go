@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"github.com/pkg/errors"
@@ -7,7 +7,7 @@ import (
 	"slices"
 )
 
-func getRelease(name string, listAction *action.List) (*release.Release, error) {
+func GetRelease(name string, listAction *action.List) (*release.Release, error) {
 	listAction.Deployed = true
 	listAction.SetStateMask()
 

@@ -5,8 +5,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v2"
+	"helm-migrate-values/internal"
 	"helm-migrate-values/pkg"
 	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/cli"
 	"io"
 	"log"
 	"os"
@@ -40,7 +42,7 @@ The command will return an error if:
 	- no migrations are defined in the chart
 `
 
-func newRootCmd(actionConfig *action.Configuration, out io.Writer, args []string) (*cobra.Command, error) {
+func NewRootCmd(actionConfig *action.Configuration, settings *cli.EnvSettings, out io.Writer, log *internal.Logger) (*cobra.Command, error) {
 	cmd := &cobra.Command{
 		Use:   "migrate-values [RELEASE] [CHART] [flags]",
 		Short: "helm migrator for values schemas",
@@ -54,37 +56,38 @@ func newRootCmd(actionConfig *action.Configuration, out io.Writer, args []string
 	flags.StringVarP(&outputFile, "output-file", "o", "",
 		"The output file to which the result is saved. Standard output is used if this option is not set.")
 
-	runner := newRunner(actionConfig, flags, out, &outputFile)
+	runner := newRunner(actionConfig, flags, settings, out, &outputFile, log)
 	cmd.RunE = runner
 
 	return cmd, nil
 }
 
-func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, out io.Writer, outputFile *string) func(cmd *cobra.Command, args []string) error {
+func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, settings *cli.EnvSettings, out io.Writer, outputFile *string, log *internal.Logger) func(cmd *cobra.Command, args []string) error {
 	// We use the install action for locating the chart
 	var installAction = action.NewInstall(actionConfig)
 	var listAction = action.NewList(actionConfig)
 
-	addChartPathOptionsFlags(flags, &installAction.ChartPathOptions)
+	internal.AddChartPathOptionsFlags(flags, &installAction.ChartPathOptions)
 
 	return func(cmd *cobra.Command, args []string) error {
 		helmDriver := os.Getenv("HELM_DRIVER")
-		if err := actionConfig.Init(settings.RESTClientGetter(), settings.Namespace(), helmDriver, debug); err != nil {
+		if err := actionConfig.Init(settings.RESTClientGetter(), settings.Namespace(), helmDriver, log.Debug); err != nil {
 			return err
 		}
 
-		name, chart, err := nameAndChart(args)
+		name, chart, err := internal.NameAndChart(args)
 		if err != nil {
 			return err
 		}
 
-		chartDir, cleanupDirectory, err := locateChart(chart, installAction)
+		chartDir, cleanupDirectory, err := internal.LocateChart(chart, installAction, settings, log)
 		if err != nil {
 			return fmt.Errorf("failed to download chart: %w", err)
 		}
 
 		if cleanupDirectory {
 			defer func() {
+				log.Debug("Cleaning up extracted chart at %s", *chartDir)
 				if err = os.RemoveAll(*chartDir); err != nil {
 					err = fmt.Errorf("failed to cleanup extracted chart: %w", err)
 				}
@@ -92,23 +95,23 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, out io.
 		}
 
 		if chartDir != nil {
-			debug("Using chart at: %s", *chartDir)
+			log.Debug("Using chart at: %s", *chartDir)
 		}
 
-		release, err := getRelease(name, listAction)
+		release, err := internal.GetRelease(name, listAction)
 		if err != nil {
 			return err
 		}
 
 		if release != nil {
-			debug("Release is using chart: %s", release.Chart.Metadata.Name)
-			debug("Release is currently on chart version: %s", release.Chart.Metadata.Version)
-			debug("Release has the values: %s", release.Config)
+			log.Debug("Release is using chart: %s", release.Chart.Metadata.Name)
+			log.Debug("Release is currently on chart version: %s", release.Chart.Metadata.Version)
+			log.Debug("Release has the values: %s", release.Config)
 		}
 
 		if release.Config != nil && len(release.Config) > 0 {
 
-			migratedConfig, err := pkg.MigrateFromPath(release.Config, nil, *chartDir+"/value-migrations/")
+			migratedConfig, err := pkg.MigrateFromPath(release.Config, nil, *chartDir+"/value-migrations/", log)
 			if err != nil {
 				return err
 			}

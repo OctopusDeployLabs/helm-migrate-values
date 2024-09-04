@@ -3,6 +3,7 @@ package pkg
 import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"helm-migrate-values/internal"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/release"
@@ -22,17 +23,6 @@ func TestMigrator_IntegrationTests(t *testing.T) {
 
 	chartV1Path := "test-charts/v1/" // Note that these aren't necessarily valid charts, they're just what we need for testing.
 	chartV2Path := "test-charts/v2/"
-
-	migration := map[string]interface{}{
-		"agent": map[string]interface{}{
-			"deploymentTarget": map[string]interface{}{
-				"initial": map[string]interface{}{
-					"environments": []string{"Development", "Test", "Prod"},
-				},
-			},
-		},
-		"myKey": nil,
-	}
 
 	expected := map[string]interface{}{
 		"agent": map[interface{}]interface{}{
@@ -57,12 +47,8 @@ func TestMigrator_IntegrationTests(t *testing.T) {
 	rel1, err := install.Run(chV1, customValues)
 	req.NoError(err, "Error installing chart v1")
 
-	// Make a migration
-	ms := &MemoryMigrationSource{}
-	ms.AddMigrationData(2, migration)
-
 	// Migrate the release user values (config)
-	migratedValues, err := Migrate(rel1.Config, nil, ms)
+	migratedValues, err := MigrateFromPath(rel1.Config, nil, "test-charts/v2/value-migrations/", internal.NewLogger(true))
 	req.NoError(err, "Error migrating values")
 
 	// Load the v2 chart

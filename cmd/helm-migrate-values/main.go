@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"helm-migrate-values/internal"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
 	"log"
@@ -17,10 +18,12 @@ func init() {
 
 func main() {
 	var actionConfig = new(action.Configuration)
+	logger := internal.NewLogger(settings.Debug)
+	logger.Debug("Debug mode enabled")
 
-	cmd, err := newRootCmd(actionConfig, os.Stdout, os.Args[1:])
+	cmd, err := NewRootCmd(actionConfig, settings, os.Stdout, logger)
 	if err != nil {
-		warning("%+v", err)
+		logger.Warning("%+v", err)
 		os.Exit(1)
 	}
 
