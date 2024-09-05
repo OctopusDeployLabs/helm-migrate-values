@@ -4,6 +4,10 @@
 
 - [Install](#install)
 
+## Requirements
+
+- Helm version 3 or newer
+
 ## Install
 
 ```
