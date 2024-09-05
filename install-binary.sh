@@ -95,7 +95,7 @@ getDownloadURL() {
 
 # Temporary dir
 mkTempDir() {
-  HELM_TMP="$(mktemp -d -t "${PROJECT_NAME}-XXXXXX")"
+  HELM_TMP="$(mktemp -d "${TMPDIR:-/tmp}${PROJECT_NAME}.XXXXXXXXX")"
 }
 rmTempDir() {
   if [ -d "${HELM_TMP:-/tmp/helm-helm-migrate-values-tmp}" ]; then
@@ -123,7 +123,7 @@ downloadFile() {
 # installs it.
 installFile() {
   tar xzf "$PLUGIN_TMP_FILE" -C "$HELM_TMP"
-  HELM_TMP_BIN="$HELM_TMP/helm-migrate-values/bin/migrate-values"
+  HELM_TMP_BIN="$HELM_TMP/migrate-values/bin/migrate-values"
   if [ "${OS}" = "windows" ]; then
     HELM_TMP_BIN="$HELM_TMP_BIN.exe"
   fi
