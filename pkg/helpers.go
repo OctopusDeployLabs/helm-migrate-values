@@ -12,13 +12,13 @@ import (
 	"testing"
 )
 
-func yamlUnmarshal(customValuesV1 string) (map[string]interface{}, error) {
-	var cfgMap map[string]interface{}
-	err := yaml.Unmarshal([]byte(customValuesV1), &cfgMap)
+func yamlUnmarshal(values string) (map[string]interface{}, error) {
+	var valuesMap map[string]interface{}
+	err := yaml.Unmarshal([]byte(values), &valuesMap)
 	if err != nil {
 		return nil, err
 	}
-	return cfgMap, nil
+	return valuesMap, nil
 }
 
 // from https://github.com/helm/helm/blob/main/pkg/action/action_test.go#L39

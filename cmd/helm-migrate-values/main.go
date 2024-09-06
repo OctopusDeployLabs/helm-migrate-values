@@ -18,7 +18,7 @@ func init() {
 
 func main() {
 	var actionConfig = new(action.Configuration)
-	logger := internal.NewLogger(settings.Debug)
+	logger := *internal.NewLogger(settings.Debug)
 	logger.Debug("Debug mode enabled")
 
 	cmd, err := NewRootCmd(actionConfig, settings, os.Stdout, logger)

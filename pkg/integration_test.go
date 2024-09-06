@@ -10,7 +10,33 @@ import (
 	"testing"
 )
 
+var testCases = []struct {
+	name       string
+	chart1Path string
+	chart2Path string
+}{
+	{
+		name:       "migrate charts in folders",
+		chart1Path: "test-charts/v1/", // Note that these aren't necessarily valid charts, they're just what we need for testing.
+		chart2Path: "test-charts/v2/",
+	},
+	{
+		name:       "migrate charts in tgz",
+		chart1Path: "test-charts/my-chart-1.0.0.tgz",
+		chart2Path: "test-charts/my-chart-2.0.0.tgz",
+	},
+}
+
 func TestMigrator_IntegrationTests(t *testing.T) {
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			migrateCharts(t, tc.chart1Path, tc.chart2Path)
+		})
+	}
+}
+
+func migrateCharts(t *testing.T, chartV1Path, chartV2Path string) {
+
 	is := assert.New(t)
 	req := require.New(t)
 
@@ -20,9 +46,6 @@ func TestMigrator_IntegrationTests(t *testing.T) {
 			"targetEnvironments": []interface{}{"Development", "Test", "Prod"},
 		},
 	}
-
-	chartV1Path := "test-charts/v1/" // Note that these aren't necessarily valid charts, they're just what we need for testing.
-	chartV2Path := "test-charts/v2/"
 
 	expected := map[string]interface{}{
 		"agent": map[interface{}]interface{}{
@@ -48,7 +71,7 @@ func TestMigrator_IntegrationTests(t *testing.T) {
 	req.NoError(err, "Error installing chart v1")
 
 	// Migrate the release user values (config)
-	migratedValues, err := MigrateFromPath(rel1.Config, nil, "test-charts/v2/value-migrations/", internal.NewLogger(true))
+	migratedValues, err := MigrateFromPath(rel1.Config, nil, "test-charts/v2/value-migrations/", *internal.NewLogger(false))
 	req.NoError(err, "Error migrating values")
 
 	// Load the v2 chart

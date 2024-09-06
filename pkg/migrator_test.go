@@ -3,6 +3,7 @@ package pkg
 import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"helm-migrate-values/internal"
 	"testing"
 )
 
@@ -31,21 +32,21 @@ var migrateAcrossVersionsTestCases = []struct {
 		name:                        "migrate with a missing migration",
 		currentVersion:              1,
 		versionTo:                   ptr(4),
-		includeMigrationsToVersions: []int{2, 3, 4},
+		includeMigrationsToVersions: []int{3, 4},
 		expected:                    version4Config,
 	},
 	{
 		name:                        "migrate with no end version specified",
 		currentVersion:              1,
 		versionTo:                   nil,
-		includeMigrationsToVersions: []int{2, 3, 4},
+		includeMigrationsToVersions: []int{3, 4},
 		expected:                    version4Config,
 	},
 	{
 		name:                        "migrate with end version less than max in available migrations",
 		currentVersion:              1,
 		versionTo:                   ptr(3),
-		includeMigrationsToVersions: []int{2, 3, 4},
+		includeMigrationsToVersions: []int{3, 4},
 		expected:                    version3Config,
 	},
 	{
@@ -63,13 +64,13 @@ func TestMigrator_MigrateAcrossVersions(t *testing.T) {
 			is := assert.New(t)
 			req := require.New(t)
 
-			currentVer, ok := versionConfigs[tc.currentVersion]
+			currentConfig, ok := versionConfigs[tc.currentVersion]
 			req.Truef(ok, "version %d not found", tc.currentVersion)
-			req.NotNilf(currentVer, "version %d not found or has invalid YAML", tc.currentVersion)
+			req.NotNilf(currentConfig, "configuration for version %d not found, or has invalid YAML", tc.currentVersion)
 
 			ms := loadMigrationsToVersions(tc.includeMigrationsToVersions)
 
-			migrated, err := Migrate(currentVer, tc.versionTo, ms)
+			migrated, err := Migrate(currentConfig, tc.versionTo, ms, *internal.NewLogger(false))
 			req.NoError(err)
 
 			is.EqualValues(tc.expected, migrated)
@@ -81,8 +82,8 @@ func ptr[K any](val K) *K {
 	return &val
 }
 
-func loadMigrationsToVersions(versions []int) MigrationSource {
-	ms := &MemoryMigrationSource{}
+func loadMigrationsToVersions(versions []int) MigrationProvider {
+	ms := &MemoryMigrationProvider{}
 	for _, v := range versions {
 		m, ok := migrationData[v]
 		if ok {

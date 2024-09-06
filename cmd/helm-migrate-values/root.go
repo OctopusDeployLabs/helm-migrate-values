@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v2"
@@ -12,6 +13,8 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 const cmdDescription = `Migrate the user-supplied values of a Helm release to the current version of its chart's values schema.
@@ -42,7 +45,7 @@ The command will return an error if:
 	- no migrations are defined in the chart
 `
 
-func NewRootCmd(actionConfig *action.Configuration, settings *cli.EnvSettings, out io.Writer, log *internal.Logger) (*cobra.Command, error) {
+func NewRootCmd(actionConfig *action.Configuration, settings *cli.EnvSettings, out io.Writer, log internal.Logger) (*cobra.Command, error) {
 	cmd := &cobra.Command{
 		Use:   "migrate-values [RELEASE] [CHART] [flags]",
 		Short: "helm migrator for values schemas",
@@ -62,7 +65,7 @@ func NewRootCmd(actionConfig *action.Configuration, settings *cli.EnvSettings, o
 	return cmd, nil
 }
 
-func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, settings *cli.EnvSettings, out io.Writer, outputFile *string, log *internal.Logger) func(cmd *cobra.Command, args []string) error {
+func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, settings *cli.EnvSettings, out io.Writer, outputFile *string, log internal.Logger) func(cmd *cobra.Command, args []string) error {
 	// We use the install action for locating the chart
 	var installAction = action.NewInstall(actionConfig)
 	var listAction = action.NewList(actionConfig)
@@ -75,7 +78,7 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, setting
 			return err
 		}
 
-		name, chart, err := internal.NameAndChart(args)
+		name, chart, err := nameAndChart(args)
 		if err != nil {
 			return err
 		}
@@ -111,7 +114,9 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, setting
 
 		if release.Config != nil && len(release.Config) > 0 {
 
-			migratedConfig, err := pkg.MigrateFromPath(release.Config, nil, *chartDir+"/value-migrations/", log)
+			migrationsPath := filepath.Join(*chartDir, release.Chart.Name(), "value-migrations")
+
+			migratedConfig, err := pkg.MigrateFromPath(release.Config, nil, migrationsPath, log)
 			if err != nil {
 				return err
 			}
@@ -160,4 +165,12 @@ func writeOutputValues(err error, outputFile string, migratedValues []byte) erro
 	}
 
 	return nil
+}
+
+func nameAndChart(args []string) (string, string, error) {
+	if len(args) > 2 {
+		return args[0], args[1], errors.Errorf("expected at most two arguments, unexpected arguments: %v", strings.Join(args[2:], ", "))
+	}
+
+	return args[0], args[1], nil
 }

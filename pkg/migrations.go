@@ -6,26 +6,23 @@ import (
 	"iter"
 	"maps"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strconv"
-	"strings"
 )
 
-const filePrefix = "to-v"
-const fileExtension = ".yaml"
-
-type FileSystemMigrationSource struct {
+type FileSystemMigrationProvider struct {
 	BaseDir        string
 	VersionPathMap map[int]string
 }
 
-func NewFileSystemMigrationSource(dir string) (*FileSystemMigrationSource, error) {
-
+func NewFileSystemMigrationProvider(dir string) (*FileSystemMigrationProvider, error) {
 	md, err := loadMigrationMetadata(dir)
 	if err != nil {
 		return nil, err
 	}
 
-	return &FileSystemMigrationSource{
+	return &FileSystemMigrationProvider{
 		BaseDir:        dir,
 		VersionPathMap: md,
 	}, nil
@@ -49,11 +46,16 @@ func loadMigrationMetadata(dir string) (map[int]string, error) {
 
 	versionPathMap := make(map[int]string)
 
+	filePattern := `^to-v(\d+)\.(yml|yaml)$`
+	re := regexp.MustCompile(filePattern)
+
 	for _, file := range migrationFiles {
-		if file.IsDir() || !strings.HasPrefix(file.Name(), filePrefix) || !strings.HasSuffix(file.Name(), fileExtension) {
+		matches := re.FindStringSubmatch(file.Name())
+		if file.IsDir() || len(matches) < 2 {
 			continue
 		}
-		ver, err := strconv.Atoi(strings.TrimRight(strings.TrimLeft(file.Name(), filePrefix), fileExtension))
+
+		ver, err := strconv.Atoi(matches[1])
 		if err != nil {
 			return nil, fmt.Errorf("error parsing version from '%s': %w", file.Name(), err)
 		}
@@ -64,18 +66,19 @@ func loadMigrationMetadata(dir string) (map[int]string, error) {
 	return versionPathMap, nil
 }
 
-type MigrationSource interface {
+type MigrationProvider interface {
 	GetTemplateFor(v int) (string, error)
 	GetVersions() iter.Seq[int]
 }
 
-func (f *FileSystemMigrationSource) GetTemplateFor(v int) (string, error) {
-	filePath := f.VersionPathMap[v]
-	if filePath == "" {
+func (f *FileSystemMigrationProvider) GetTemplateFor(v int) (string, error) {
+	fPath := f.VersionPathMap[v]
+	if fPath == "" {
 		return "", fmt.Errorf("no migration found for version %d", v)
 	}
 
-	mTemplate, err := os.ReadFile(f.BaseDir + filePath)
+	fullPath := filepath.Join(f.BaseDir, fPath)
+	mTemplate, err := os.ReadFile(fullPath)
 	if err != nil {
 		return "", fmt.Errorf("error reading migration template: %w", err)
 	}
@@ -83,15 +86,15 @@ func (f *FileSystemMigrationSource) GetTemplateFor(v int) (string, error) {
 	return string(mTemplate), nil
 }
 
-func (f *FileSystemMigrationSource) GetVersions() iter.Seq[int] {
+func (f *FileSystemMigrationProvider) GetVersions() iter.Seq[int] {
 	return maps.Keys(f.VersionPathMap)
 }
 
-type MemoryMigrationSource struct {
+type MemoryMigrationProvider struct {
 	VersionDataMap map[int]string
 }
 
-func (m *MemoryMigrationSource) GetTemplateFor(v int) (string, error) {
+func (m *MemoryMigrationProvider) GetTemplateFor(v int) (string, error) {
 	data, ok := m.VersionDataMap[v]
 	if !ok {
 		return "", fmt.Errorf("no migration found for version %d", v)
@@ -100,11 +103,11 @@ func (m *MemoryMigrationSource) GetTemplateFor(v int) (string, error) {
 	return data, nil
 }
 
-func (m *MemoryMigrationSource) GetVersions() iter.Seq[int] {
+func (m *MemoryMigrationProvider) GetVersions() iter.Seq[int] {
 	return maps.Keys(m.VersionDataMap)
 }
 
-func (m *MemoryMigrationSource) AddMigrationData(v int, data map[string]interface{}) {
+func (m *MemoryMigrationProvider) AddMigrationData(v int, data map[string]interface{}) {
 	if m.VersionDataMap == nil {
 		m.VersionDataMap = make(map[int]string)
 	}

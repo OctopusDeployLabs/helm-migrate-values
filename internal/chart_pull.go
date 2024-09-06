@@ -1,7 +1,6 @@
 ﻿package internal
 
 import (
-	"github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/cli"
@@ -10,7 +9,7 @@ import (
 )
 
 // Locates the chart. If this is a remote (OCI/Repo URL) it downloads the chart and extract the tgz to a temporary file
-func LocateChart(chart string, client *action.Install, settings *cli.EnvSettings, log *Logger) (*string, bool, error) {
+func LocateChart(chart string, client *action.Install, settings *cli.EnvSettings, log Logger) (*string, bool, error) {
 	err := setupRegistryClient(client, settings)
 	if err != nil {
 		return nil, false, err
@@ -55,12 +54,4 @@ func setupRegistryClient(client *action.Install, settings *cli.EnvSettings) erro
 	}
 
 	return err
-}
-
-func NameAndChart(args []string) (string, string, error) {
-	if len(args) > 2 {
-		return args[0], args[1], errors.Errorf("expected at most two arguments, unexpected arguments: %v", strings.Join(args[2:], ", "))
-	}
-
-	return args[0], args[1], nil
 }
