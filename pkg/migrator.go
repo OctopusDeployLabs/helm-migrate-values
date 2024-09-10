@@ -20,12 +20,12 @@ func MigrateFromPath(currentConfig map[string]interface{}, vTo *int, migrationsD
 
 	log.Debug("migrating values from path: %s", migrationsDir)
 
-	ms, err := NewFileSystemMigrationProvider(migrationsDir)
+	mp, err := NewFileSystemMigrationProvider(migrationsDir)
 	if err != nil {
 		return nil, fmt.Errorf("error creating migration provider: %w", err)
 	}
 
-	return Migrate(currentConfig, vTo, ms, log)
+	return Migrate(currentConfig, vTo, mp, log)
 }
 
 func Migrate(currentConfig map[string]interface{}, vTo *int, mp MigrationProvider, log internal.Logger) (map[string]interface{}, error) {
