@@ -1,30 +1,31 @@
-﻿package main
+﻿package internal
 
 import (
-	"github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chartutil"
+	"helm.sh/helm/v3/pkg/cli"
 	"os"
 	"strings"
 )
 
 // Locates the chart. If this is a remote (OCI/Repo URL) it downloads the chart and extract the tgz to a temporary file
-func locateChart(chart string, client *action.Install) (*string, bool, error) {
-	err := setupRegistryClient(client)
+func LocateChart(chart string, client *action.Install, settings *cli.EnvSettings, log Logger) (*string, bool, error) {
+	err := setupRegistryClient(client, settings)
 	if err != nil {
 		return nil, false, err
 	}
 
+	log.Debug("Locating chart %s", chart)
 	chartPath, err := client.ChartPathOptions.LocateChart(chart, settings)
 	if err != nil {
 		return nil, false, err
 	}
 
-	debug("Chart path: %s", chartPath)
+	log.Debug("Chart path: %s", chartPath)
 
 	//if the located chart path is not a .tgz file, it must be a local directory
 	if !strings.HasSuffix(chartPath, ".tgz") {
-		debug("Chart is not a .tgz, using path %s", chartPath)
+		log.Debug("Chart is not a .tgz, using path %s", chartPath)
 		return &chartPath, false, nil
 	}
 
@@ -39,26 +40,18 @@ func locateChart(chart string, client *action.Install) (*string, bool, error) {
 		return nil, false, err
 	}
 
-	debug("Unpacked chart to %s", tempPath)
+	log.Debug("Unpacked chart to %s", tempPath)
 
 	return &tempPath, true, nil
 }
 
-func setupRegistryClient(client *action.Install) error {
+func setupRegistryClient(client *action.Install, settings *cli.EnvSettings) error {
 	//set up the registry client with appropriate information
-	registryClient, err := newRegistryClient(client.CertFile, client.KeyFile, client.CaFile, client.InsecureSkipTLSverify, client.PlainHTTP)
+	registryClient, err := newRegistryClient(client.CertFile, client.KeyFile, client.CaFile, client.InsecureSkipTLSverify, client.PlainHTTP, settings.RegistryConfig, settings.Debug)
 
 	if err == nil {
 		client.SetRegistryClient(registryClient)
 	}
 
 	return err
-}
-
-func nameAndChart(args []string) (string, string, error) {
-	if len(args) > 2 {
-		return args[0], args[1], errors.Errorf("expected at most two arguments, unexpected arguments: %v", strings.Join(args[2:], ", "))
-	}
-
-	return args[0], args[1], nil
 }

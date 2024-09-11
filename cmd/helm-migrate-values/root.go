@@ -2,11 +2,19 @@ package main
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"gopkg.in/yaml.v2"
+	"helm-migrate-values/internal"
+	"helm-migrate-values/pkg"
 	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/cli"
 	"io"
+	"log"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 const cmdDescription = `Migrate the user-supplied values of a Helm release to the current version of its chart's values schema.
@@ -19,10 +27,10 @@ e.g.
 The migration is defined as a series of schema transformations using Go Templating in the form of YAML files. These YAML files
 should be stored in the chart itself as:
 
-	{CHART_DIR}/value-migrations/{VERSION_FROM}-{VERSION_TO}.yaml
+	{CHART_DIR}/value-migrations/to-v{VERSION_TO}.yaml
 
 		CHART_DIR is directory in which the Helm chart is defined
-		VERSION_FROM and VERSION_TO represent the versions of the values schemas. These should use the same versioning as the chart itself.
+		VERSION_TO represents the major version of the values schema. These should use the same versioning as the chart itself.
 
 Arguments:
   RELEASE
@@ -37,7 +45,7 @@ The command will return an error if:
 	- no migrations are defined in the chart
 `
 
-func newRootCmd(actionConfig *action.Configuration, out io.Writer, args []string) (*cobra.Command, error) {
+func NewRootCmd(actionConfig *action.Configuration, settings *cli.EnvSettings, out io.Writer, log internal.Logger) (*cobra.Command, error) {
 	cmd := &cobra.Command{
 		Use:   "migrate-values [RELEASE] [CHART] [flags]",
 		Short: "helm migrator for values schemas",
@@ -51,22 +59,22 @@ func newRootCmd(actionConfig *action.Configuration, out io.Writer, args []string
 	flags.StringVarP(&outputFile, "output-file", "o", "",
 		"The output file to which the result is saved. Standard output is used if this option is not set.")
 
-	runner := newRunner(actionConfig, flags, outputFile)
+	runner := newRunner(actionConfig, flags, settings, out, &outputFile, log)
 	cmd.RunE = runner
 
 	return cmd, nil
 }
 
-func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputFile string) func(cmd *cobra.Command, args []string) error {
+func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, settings *cli.EnvSettings, out io.Writer, outputFile *string, log internal.Logger) func(cmd *cobra.Command, args []string) error {
 	// We use the install action for locating the chart
 	var installAction = action.NewInstall(actionConfig)
 	var listAction = action.NewList(actionConfig)
 
-	addChartPathOptionsFlags(flags, &installAction.ChartPathOptions)
+	internal.AddChartPathOptionsFlags(flags, &installAction.ChartPathOptions)
 
 	return func(cmd *cobra.Command, args []string) error {
 		helmDriver := os.Getenv("HELM_DRIVER")
-		if err := actionConfig.Init(settings.RESTClientGetter(), settings.Namespace(), helmDriver, debug); err != nil {
+		if err := actionConfig.Init(settings.RESTClientGetter(), settings.Namespace(), helmDriver, log.Debug); err != nil {
 			return err
 		}
 
@@ -75,13 +83,14 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputF
 			return err
 		}
 
-		chartDir, cleanupDirectory, err := locateChart(chart, installAction)
+		chartDir, cleanupDirectory, err := internal.LocateChart(chart, installAction, settings, log)
 		if err != nil {
 			return fmt.Errorf("failed to download chart: %w", err)
 		}
 
 		if cleanupDirectory {
 			defer func() {
+				log.Debug("Cleaning up extracted chart at %s", *chartDir)
 				if err = os.RemoveAll(*chartDir); err != nil {
 					err = fmt.Errorf("failed to cleanup extracted chart: %w", err)
 				}
@@ -89,24 +98,79 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, outputF
 		}
 
 		if chartDir != nil {
-			debug("Using chart at: %s", *chartDir)
+			log.Debug("Using chart at: %s", *chartDir)
 		}
 
-		release, err := getRelease(name, listAction)
+		release, err := internal.GetRelease(name, listAction)
 		if err != nil {
 			return err
 		}
 
 		if release != nil {
-			debug("Release is using chart: %s", release.Chart.Metadata.Name)
-			debug("Release is currently on chart version: %s", release.Chart.Metadata.Version)
-			debug("Release has the values: %s", release.Config)
+			log.Debug("Release is using chart: %s", release.Chart.Metadata.Name)
+			log.Debug("Release is currently on chart version: %s", release.Chart.Metadata.Version)
+			log.Debug("Release has the values: %s", release.Config)
 		}
 
-		//TODO: Load the transformations from the migrations directory
-		//TODO: Apply the transformations (if needed) to the current values w.r.t the current chart version
-		//TODO: Output the result or save to a file location
+		if release.Config != nil && len(release.Config) > 0 {
 
-		return err
+			migrationsPath := filepath.Join(*chartDir, release.Chart.Name(), "value-migrations")
+
+			migratedConfig, err := pkg.MigrateFromPath(release.Config, nil, migrationsPath, log)
+			if err != nil {
+				return err
+			}
+
+			migratedValues, err := yaml.Marshal(migratedConfig)
+			if err != nil {
+				return fmt.Errorf("migrated values are in an invalid format: %w", err)
+			}
+
+			if *outputFile == "" {
+				message := fmt.Sprintf("Migrated values for release %s:\n%s", name, string(migratedValues))
+				if _, err = fmt.Fprint(out, message); err != nil {
+					return fmt.Errorf("error writing migrated values to standard output: %w", err)
+				}
+			} else {
+				if err = writeOutputValues(err, *outputFile, migratedValues); err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
 	}
+}
+
+func writeOutputValues(err error, outputFile string, migratedValues []byte) error {
+	f, err := os.Create(outputFile)
+	if err != nil {
+		return fmt.Errorf("error creating output values file: %w", err)
+	}
+
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			log.Fatal(fmt.Errorf("error closing output values file: %w", err))
+		}
+	}(f)
+
+	_, err = f.Write(migratedValues)
+	if err != nil {
+		return fmt.Errorf("error writing migrated values to output values file: %w", err)
+	}
+
+	if err = f.Sync(); err != nil {
+		return fmt.Errorf("error writing migrated values to output values file: %w", err)
+	}
+
+	return nil
+}
+
+func nameAndChart(args []string) (string, string, error) {
+	if len(args) > 2 {
+		return args[0], args[1], errors.Errorf("expected at most two arguments, unexpected arguments: %v", strings.Join(args[2:], ", "))
+	}
+
+	return args[0], args[1], nil
 }
