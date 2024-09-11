@@ -83,14 +83,14 @@ func ptr[K any](val K) *K {
 }
 
 func loadMigrationsToVersions(versions []int) MigrationProvider {
-	ms := &MemoryMigrationProvider{}
+	mp := &MemoryMigrationProvider{}
 	for _, v := range versions {
 		m, ok := migrationData[v]
 		if ok {
-			ms.AddMigrationData(v, m)
+			mp.AddMigrationData(v, m)
 		}
 	}
-	return ms
+	return mp
 }
 
 var versionConfigs = map[int]map[string]interface{}{

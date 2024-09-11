@@ -10,7 +10,7 @@ spec:
         - name: {{ .Chart.Name }}
           env:
             - name: "TargetEnvironments"
-              value: [{{ join "," .Values.agent.deploymentTarget.initial.environments | quote }}]
+              value: [{{ join "," .Values.project.deploymentTarget.initial.environments | quote }}]
   selector:
     matchLabels:
       app: {{ .Chart.Name }}

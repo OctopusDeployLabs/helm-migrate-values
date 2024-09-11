@@ -42,13 +42,13 @@ func migrateCharts(t *testing.T, chartV1Path, chartV2Path string) {
 
 	customValues := map[string]interface{}{
 		"myKey": "myValue",
-		"agent": map[string]interface{}{
+		"project": map[string]interface{}{
 			"targetEnvironments": []interface{}{"Development", "Test", "Prod"},
 		},
 	}
 
 	expected := map[string]interface{}{
-		"agent": map[interface{}]interface{}{
+		"project": map[interface{}]interface{}{
 			"deploymentTarget": map[interface{}]interface{}{
 				"initial": map[interface{}]interface{}{
 					"environments": []interface{}{"Development", "Test", "Prod"},

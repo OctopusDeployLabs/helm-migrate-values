@@ -10,4 +10,4 @@ spec:
         - name: {{ .Chart.Name }}
           env:
             - name: "TargetEnvironment"
-              value: {{ join "," .Values.agent.targetEnvironments | quote }}
+              value: {{ join "," .Values.project.targetEnvironments | quote }}
