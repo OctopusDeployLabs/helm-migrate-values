@@ -14,6 +14,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -114,9 +116,15 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, setting
 
 		if release.Config != nil && len(release.Config) > 0 {
 
+			majorVerRegEx := regexp.MustCompile(`^(\d+)\..*`)
+			matches := majorVerRegEx.FindStringSubmatch(release.Chart.Metadata.Version)
+			if len(matches) == 0 {
+				return fmt.Errorf("failed to extract major version from chart version: %s", release.Chart.Metadata.Version)
+			}
+			relMajorVer, _ := strconv.Atoi(matches[1])
 			migrationsPath := filepath.Join(*chartDir, release.Chart.Name(), "value-migrations")
 
-			migratedConfig, err := pkg.MigrateFromPath(release.Config, nil, migrationsPath, log)
+			migratedConfig, err := pkg.MigrateFromPath(release.Config, relMajorVer, nil, migrationsPath, log)
 			if err != nil {
 				return err
 			}

@@ -22,6 +22,13 @@ var migrateAcrossVersionsTestCases = []struct {
 		expected:                    version4Config,
 	},
 	{
+		name:                        "migrate across single version with earlier migrations present",
+		currentVersion:              3,
+		versionTo:                   ptr(4),
+		includeMigrationsToVersions: []int{3, 4},
+		expected:                    version4Config,
+	},
+	{
 		name:                        "migrate across multiple versions",
 		currentVersion:              2,
 		versionTo:                   ptr(4),
@@ -70,7 +77,7 @@ func TestMigrator_MigrateAcrossVersions(t *testing.T) {
 
 			ms := loadMigrationsToVersions(tc.includeMigrationsToVersions)
 
-			migrated, err := Migrate(currentConfig, tc.versionTo, ms, *internal.NewLogger(false))
+			migrated, err := Migrate(currentConfig, tc.currentVersion, tc.versionTo, ms, *internal.NewLogger(false))
 			req.NoError(err)
 
 			is.EqualValues(tc.expected, migrated)
