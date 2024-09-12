@@ -11,7 +11,7 @@ import (
 	"text/template"
 )
 
-func MigrateFromPath(currentConfig map[string]interface{}, vTo *int, migrationsDir string, log internal.Logger) (map[string]interface{}, error) {
+func MigrateFromPath(currentConfig map[string]interface{}, vFrom int, vTo *int, migrationsDir string, log internal.Logger) (map[string]interface{}, error) {
 
 	if len(currentConfig) == 0 {
 		log.Debug("no existing values to migrate")
@@ -25,10 +25,10 @@ func MigrateFromPath(currentConfig map[string]interface{}, vTo *int, migrationsD
 		return nil, fmt.Errorf("error creating migration provider: %w", err)
 	}
 
-	return Migrate(currentConfig, vTo, mp, log)
+	return Migrate(currentConfig, vFrom, vTo, mp, log)
 }
 
-func Migrate(currentConfig map[string]interface{}, vTo *int, mp MigrationProvider, log internal.Logger) (map[string]interface{}, error) {
+func Migrate(currentConfig map[string]interface{}, vFrom int, vTo *int, mp MigrationProvider, log internal.Logger) (map[string]interface{}, error) {
 
 	log.Debug("migrating values")
 	versions := slices.Sorted(mp.GetVersions())
@@ -44,20 +44,22 @@ func Migrate(currentConfig map[string]interface{}, vTo *int, mp MigrationProvide
 	}
 
 	for _, version := range versions {
-		if vTo != nil && version > *vTo {
-			break
-		}
+		if version > vFrom {
+			if vTo != nil && version > *vTo {
+				break
+			}
 
-		log.Debug("loading migration template for version: %d", version)
-		mTemplate, err := mp.GetTemplateFor(version)
-		if err != nil {
-			return nil, fmt.Errorf("error retrieving migration template: %w", err)
-		}
+			log.Debug("loading migration template for version: %d", version)
+			mTemplate, err := mp.GetTemplateFor(version)
+			if err != nil {
+				return nil, fmt.Errorf("error retrieving migration template: %w", err)
+			}
 
-		log.Debug("applying migration template for version: %d", version)
-		migratedConfig, err = apply(migratedConfig, mTemplate)
-		if err != nil {
-			return nil, fmt.Errorf("error applying migration: %w", err)
+			log.Debug("applying migration template for version: %d", version)
+			migratedConfig, err = apply(migratedConfig, mTemplate)
+			if err != nil {
+				return nil, fmt.Errorf("error applying migration: %w", err)
+			}
 		}
 	}
 
