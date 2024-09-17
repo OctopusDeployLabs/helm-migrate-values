@@ -113,8 +113,10 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, setting
 			log.Debug("Release is currently on chart version: %s", release.Chart.Metadata.Version)
 
 			if log.IsDebug {
-				value, _ := yaml.Marshal(release.Config)
-				log.Debug("Release has the values:\n%s", value)
+				value, err := yaml.Marshal(release.Config)
+				if err != nil {
+					log.Debug("Release has the following user-supplied values:\n%s", value)
+				}
 			}
 
 		}
@@ -146,7 +148,7 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, setting
 				}
 
 				if *outputFile == "" {
-					message := fmt.Sprintf("Migrated values for release %s:\n%s", name, string(migratedValues))
+					message := fmt.Sprintf("Migrated user-supplied values for release %s:\n%s", name, string(migratedValues))
 					if _, err = fmt.Fprint(out, message); err != nil {
 						return fmt.Errorf("error writing migrated values to standard output: %w", err)
 					}

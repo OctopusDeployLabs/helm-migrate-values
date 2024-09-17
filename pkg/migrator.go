@@ -15,7 +15,7 @@ import (
 func MigrateFromPath(currentConfig map[string]interface{}, vFrom int, vTo *int, migrationsDir string, log internal.Logger) (map[string]interface{}, error) {
 
 	if len(currentConfig) == 0 {
-		fmt.Println("no existing values to migrate")
+		fmt.Println("no existing user-supplied values to migrate")
 		return nil, nil
 	}
 
@@ -24,7 +24,7 @@ func MigrateFromPath(currentConfig map[string]interface{}, vFrom int, vTo *int, 
 		return nil, nil
 	}
 
-	log.Debug("migrating values from path: %s", migrationsDir)
+	log.Debug("migrating user-supplied values from migrations in path: %s", migrationsDir)
 
 	mp, err := NewFileSystemMigrationProvider(migrationsDir)
 	if err != nil {
@@ -36,7 +36,7 @@ func MigrateFromPath(currentConfig map[string]interface{}, vFrom int, vTo *int, 
 
 func Migrate(currentConfig map[string]interface{}, vFrom int, vTo *int, mp MigrationProvider, log internal.Logger) (map[string]interface{}, error) {
 
-	log.Debug("migrating values")
+	log.Debug("migrating user-supplied values")
 	versions := slices.Sorted(mp.GetVersions())
 
 	if len(versions) == 0 {
