@@ -131,8 +131,8 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, setting
 			relMajorVer, _ := strconv.Atoi(matches[1])
 			migrationsPath := filepath.Join(*chartDir, release.Chart.Name(), "value-migrations")
 
-			// vTo is always nil, because we only ever include migrations up to the current chart version
-			// The migrations library does support migrating to a specific version, but we don't need that here
+			// vTo is always nil, because it really only makes sense include migrations up to the current chart version.
+			// The migrations library does support migrating to a specific version though.
 			migratedConfig, err := pkg.MigrateFromPath(release.Config, relMajorVer, nil, migrationsPath, log)
 			if err != nil {
 				return err
