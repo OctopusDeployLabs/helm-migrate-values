@@ -164,7 +164,7 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, setting
 		}
 
 		if !migrationRequired {
-			fmt.Printf("No migration required for release %s", name)
+			log.Warning("No migration required for release %s", name)
 		}
 
 		return nil

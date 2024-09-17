@@ -15,12 +15,12 @@ import (
 func MigrateFromPath(currentConfig map[string]interface{}, vFrom int, vTo *int, migrationsDir string, log internal.Logger) (map[string]interface{}, error) {
 
 	if len(currentConfig) == 0 {
-		fmt.Println("no existing user-supplied values to migrate")
+		log.Warning("no existing user-supplied values to migrate")
 		return nil, nil
 	}
 
 	if !directoryExists(migrationsDir) {
-		fmt.Println("no migrations found")
+		log.Warning("no migrations found")
 		return nil, nil
 	}
 
