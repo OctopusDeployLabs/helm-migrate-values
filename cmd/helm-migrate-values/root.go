@@ -111,10 +111,17 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, setting
 		if release != nil {
 			log.Debug("Release is using chart: %s", release.Chart.Metadata.Name)
 			log.Debug("Release is currently on chart version: %s", release.Chart.Metadata.Version)
-			log.Debug("Release has the values: %s", release.Config)
+
+			if log.IsDebug {
+				value, _ := yaml.Marshal(release.Config)
+				log.Debug("Release has the values:\n%s", value)
+			}
+
 		}
 
-		if release.Config != nil && len(release.Config) > 0 {
+		migrationRequired := release.Config != nil && len(release.Config) > 0
+
+		if migrationRequired {
 
 			majorVerRegEx := regexp.MustCompile(`^(\d+)\..*`)
 			matches := majorVerRegEx.FindStringSubmatch(release.Chart.Metadata.Version)
@@ -124,26 +131,38 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, setting
 			relMajorVer, _ := strconv.Atoi(matches[1])
 			migrationsPath := filepath.Join(*chartDir, release.Chart.Name(), "value-migrations")
 
+			// vTo is always nil, because we only ever include migrations up to the current chart version
+			// The migrations library does support migrating to a specific version, but we don't need that here
 			migratedConfig, err := pkg.MigrateFromPath(release.Config, relMajorVer, nil, migrationsPath, log)
 			if err != nil {
 				return err
 			}
 
-			migratedValues, err := yaml.Marshal(migratedConfig)
-			if err != nil {
-				return fmt.Errorf("migrated values are in an invalid format: %w", err)
-			}
+			if len(migratedConfig) > 0 {
 
-			if *outputFile == "" {
-				message := fmt.Sprintf("Migrated values for release %s:\n%s", name, string(migratedValues))
-				if _, err = fmt.Fprint(out, message); err != nil {
-					return fmt.Errorf("error writing migrated values to standard output: %w", err)
+				migratedValues, err := yaml.Marshal(migratedConfig)
+				if err != nil {
+					return fmt.Errorf("migrated values are in an invalid format: %w", err)
+				}
+
+				if *outputFile == "" {
+					message := fmt.Sprintf("Migrated values for release %s:\n%s", name, string(migratedValues))
+					if _, err = fmt.Fprint(out, message); err != nil {
+						return fmt.Errorf("error writing migrated values to standard output: %w", err)
+					}
+				} else {
+					if err = writeOutputValues(err, *outputFile, migratedValues); err != nil {
+						return err
+					}
 				}
 			} else {
-				if err = writeOutputValues(err, *outputFile, migratedValues); err != nil {
-					return err
-				}
+				migrationRequired = false
 			}
+
+		}
+
+		if !migrationRequired {
+			fmt.Printf("No migration required for release %s", name)
 		}
 
 		return nil

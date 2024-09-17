@@ -1,7 +1,6 @@
 package pkg
 
 import (
-	"gopkg.in/yaml.v2"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chartutil"
 	kubefake "helm.sh/helm/v3/pkg/kube/fake"
@@ -11,15 +10,6 @@ import (
 	"log"
 	"testing"
 )
-
-func yamlUnmarshal(values string) (map[string]interface{}, error) {
-	var valuesMap map[string]interface{}
-	err := yaml.Unmarshal([]byte(values), &valuesMap)
-	if err != nil {
-		return nil, err
-	}
-	return valuesMap, nil
-}
 
 // from https://github.com/helm/helm/blob/main/pkg/action/action_test.go#L39
 func actionConfigFixture(t *testing.T) *action.Configuration {

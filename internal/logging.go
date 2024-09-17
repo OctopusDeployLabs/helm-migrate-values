@@ -7,15 +7,15 @@ import (
 )
 
 type Logger struct {
-	isDebug bool
+	IsDebug bool
 }
 
 func NewLogger(isDebug bool) *Logger {
-	return &Logger{isDebug: isDebug}
+	return &Logger{IsDebug: isDebug}
 }
 
 func (l *Logger) Debug(format string, v ...interface{}) {
-	if l.isDebug {
+	if l.IsDebug {
 		format = fmt.Sprintf("[debug] %s\n", format)
 		_ = log.Output(2, fmt.Sprintf(format, v...))
 	}

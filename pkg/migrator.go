@@ -6,6 +6,7 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"gopkg.in/yaml.v2"
 	"helm-migrate-values/internal"
+	"os"
 	"slices"
 	"strings"
 	"text/template"
@@ -14,8 +15,13 @@ import (
 func MigrateFromPath(currentConfig map[string]interface{}, vFrom int, vTo *int, migrationsDir string, log internal.Logger) (map[string]interface{}, error) {
 
 	if len(currentConfig) == 0 {
-		log.Debug("no existing values to migrate")
-		return currentConfig, nil
+		fmt.Println("no existing values to migrate")
+		return nil, nil
+	}
+
+	if !directoryExists(migrationsDir) {
+		fmt.Println("no migrations found")
+		return nil, nil
 	}
 
 	log.Debug("migrating values from path: %s", migrationsDir)
@@ -35,7 +41,7 @@ func Migrate(currentConfig map[string]interface{}, vFrom int, vTo *int, mp Migra
 
 	if len(versions) == 0 {
 		log.Warning("no migrations found")
-		return currentConfig, nil
+		return nil, nil
 	}
 
 	migratedConfig := make(map[string]interface{})
@@ -67,7 +73,7 @@ func Migrate(currentConfig map[string]interface{}, vFrom int, vTo *int, mp Migra
 }
 
 func apply(valuesData map[string]interface{}, mTemplate string) (map[string]interface{}, error) {
-	parsedTemplate, err := template.New("migration").Funcs(extraFuncs()).Parse(mTemplate)
+	parsedTemplate, err := template.New("migration").Option("missingkey=zero").Funcs(extraFuncs()).Parse(mTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing migration template: %w", err)
 	}
@@ -85,6 +91,14 @@ func apply(valuesData map[string]interface{}, mTemplate string) (map[string]inte
 	}
 
 	return migratedConfig, nil
+}
+
+func directoryExists(path string) bool {
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return info.IsDir()
 }
 
 // Modified from https://github.com/helm/helm/blob/2feac15cc3252c97c997be2ced1ab8afe314b429/pkg/engine/funcs.go#L43
