@@ -7,15 +7,15 @@ import (
 )
 
 type Logger struct {
-	isDebug bool
+	IsDebug bool
 }
 
 func NewLogger(isDebug bool) *Logger {
-	return &Logger{isDebug: isDebug}
+	return &Logger{IsDebug: isDebug}
 }
 
 func (l *Logger) Debug(format string, v ...interface{}) {
-	if l.isDebug {
+	if l.IsDebug {
 		format = fmt.Sprintf("[debug] %s\n", format)
 		_ = log.Output(2, fmt.Sprintf(format, v...))
 	}
@@ -24,4 +24,9 @@ func (l *Logger) Debug(format string, v ...interface{}) {
 func (l *Logger) Warning(format string, v ...interface{}) {
 	format = fmt.Sprintf("WARNING: %s\n", format)
 	_, _ = fmt.Fprintf(os.Stderr, format, v...)
+}
+
+func (l *Logger) Information(format string, v ...interface{}) {
+	format = fmt.Sprintf("INFO: %s\n", format)
+	_, _ = fmt.Fprintf(os.Stdout, format, v...)
 }

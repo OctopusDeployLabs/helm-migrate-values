@@ -6,6 +6,7 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"gopkg.in/yaml.v2"
 	"helm-migrate-values/internal"
+	"os"
 	"slices"
 	"strings"
 	"text/template"
@@ -14,11 +15,30 @@ import (
 func MigrateFromPath(currentConfig map[string]interface{}, vFrom int, vTo *int, migrationsDir string, log internal.Logger) (map[string]interface{}, error) {
 
 	if len(currentConfig) == 0 {
-		log.Debug("no existing values to migrate")
-		return currentConfig, nil
+		log.Warning("No existing user-supplied values to migrate")
+		return nil, nil
 	}
 
-	log.Debug("migrating values from path: %s", migrationsDir)
+	info, err := os.Stat(migrationsDir)
+
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Warning("No migrations found.")
+			return nil, nil
+		}
+
+		if os.IsPermission(err) {
+			return nil, fmt.Errorf("permission denied while checking for migrations directory: %w", err)
+		}
+
+		return nil, fmt.Errorf("error checking for migrations directory: %w", err)
+	}
+	if info != nil && !info.IsDir() {
+		log.Warning("No migrations found.")
+		return nil, nil
+	}
+
+	log.Debug("migrating user-supplied values from migrations in path: %s", migrationsDir)
 
 	mp, err := NewFileSystemMigrationProvider(migrationsDir)
 	if err != nil {
@@ -30,12 +50,12 @@ func MigrateFromPath(currentConfig map[string]interface{}, vFrom int, vTo *int, 
 
 func Migrate(currentConfig map[string]interface{}, vFrom int, vTo *int, mp MigrationProvider, log internal.Logger) (map[string]interface{}, error) {
 
-	log.Debug("migrating values")
+	log.Debug("migrating user-supplied values")
 	versions := slices.Sorted(mp.GetVersions())
 
 	if len(versions) == 0 {
-		log.Warning("no migrations found")
-		return currentConfig, nil
+		log.Warning("No migrations found")
+		return nil, nil
 	}
 
 	migratedConfig := make(map[string]interface{})
