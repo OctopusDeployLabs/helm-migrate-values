@@ -87,7 +87,7 @@ func Migrate(currentConfig map[string]interface{}, vFrom int, vTo *int, mp Migra
 }
 
 func apply(valuesData map[string]interface{}, mTemplate string) (map[string]interface{}, error) {
-	parsedTemplate, err := template.New("migration").Option("missingkey=zero").Funcs(extraFuncs()).Parse(mTemplate)
+	parsedTemplate, err := template.New("migration").Funcs(extraFuncs()).Parse(mTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing migration template: %w", err)
 	}
