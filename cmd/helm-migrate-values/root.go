@@ -118,7 +118,6 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, setting
 					log.Debug("Release has the following user-supplied values:\n%s", value)
 				}
 			}
-
 		}
 
 		if release.Config != nil && len(release.Config) > 0 {
@@ -158,7 +157,7 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, setting
 			}
 
 		} else {
-			log.Warning("No migration required for release %s", name)
+			log.Information("No migration required for release %s", name)
 		}
 
 		return nil

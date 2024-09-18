@@ -25,3 +25,8 @@ func (l *Logger) Warning(format string, v ...interface{}) {
 	format = fmt.Sprintf("WARNING: %s\n", format)
 	_, _ = fmt.Fprintf(os.Stderr, format, v...)
 }
+
+func (l *Logger) Information(format string, v ...interface{}) {
+	format = fmt.Sprintf("INFO: %s\n", format)
+	_, _ = fmt.Fprintf(os.Stdout, format, v...)
+}
