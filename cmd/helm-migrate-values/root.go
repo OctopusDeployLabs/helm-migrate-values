@@ -112,7 +112,7 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, setting
 			log.Debug("Release is using chart: %s", release.Chart.Metadata.Name)
 			log.Debug("Release is currently on chart version: %s", release.Chart.Metadata.Version)
 
-			if log.IsDebug {
+			if release.Config != nil && log.IsDebug {
 				value, err := yaml.Marshal(release.Config)
 				if err != nil {
 					log.Debug("Release has the following user-supplied values:\n%s", value)
@@ -121,9 +121,7 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, setting
 
 		}
 
-		migrationRequired := release.Config != nil && len(release.Config) > 0
-
-		if migrationRequired {
+		if release.Config != nil && len(release.Config) > 0 {
 
 			majorVerRegEx := regexp.MustCompile(`^(\d+)\..*`)
 			matches := majorVerRegEx.FindStringSubmatch(release.Chart.Metadata.Version)
@@ -157,13 +155,9 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, setting
 						return err
 					}
 				}
-			} else {
-				migrationRequired = false
 			}
 
-		}
-
-		if !migrationRequired {
+		} else {
 			log.Warning("No migration required for release %s", name)
 		}
 

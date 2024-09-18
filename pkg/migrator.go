@@ -15,12 +15,26 @@ import (
 func MigrateFromPath(currentConfig map[string]interface{}, vFrom int, vTo *int, migrationsDir string, log internal.Logger) (map[string]interface{}, error) {
 
 	if len(currentConfig) == 0 {
-		log.Warning("no existing user-supplied values to migrate")
+		log.Warning("No existing user-supplied values to migrate")
 		return nil, nil
 	}
 
-	if !directoryExists(migrationsDir) {
-		log.Warning("no migrations found")
+	info, err := os.Stat(migrationsDir)
+
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Warning("No migrations found.")
+			return nil, nil
+		}
+
+		if os.IsPermission(err) {
+			return nil, fmt.Errorf("permission denied while checking for migrations directory: %w", err)
+		}
+
+		return nil, fmt.Errorf("error checking for migrations directory: %w", err)
+	}
+	if info != nil && !info.IsDir() {
+		log.Warning("No migrations found.")
 		return nil, nil
 	}
 
@@ -40,7 +54,7 @@ func Migrate(currentConfig map[string]interface{}, vFrom int, vTo *int, mp Migra
 	versions := slices.Sorted(mp.GetVersions())
 
 	if len(versions) == 0 {
-		log.Warning("no migrations found")
+		log.Warning("No migrations found")
 		return nil, nil
 	}
 
@@ -91,14 +105,6 @@ func apply(valuesData map[string]interface{}, mTemplate string) (map[string]inte
 	}
 
 	return migratedConfig, nil
-}
-
-func directoryExists(path string) bool {
-	info, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return info.IsDir()
 }
 
 // Modified from https://github.com/helm/helm/blob/2feac15cc3252c97c997be2ced1ab8afe314b429/pkg/engine/funcs.go#L43
