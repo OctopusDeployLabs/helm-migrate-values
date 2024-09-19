@@ -1,0 +1,8 @@
+project:
+  deploymentTarget:
+    initial:
+      environments:
+        - Development
+        - Test
+        - Prod
+myKey: null

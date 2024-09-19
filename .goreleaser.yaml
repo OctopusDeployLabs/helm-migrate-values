@@ -1,0 +1,33 @@
+before:
+  hooks:
+    - go mod tidy
+
+project_name: helm-migrate-values
+builds:
+  - id: default
+    main: ./cmd/helm-migrate-values
+    binary: bin/migrate-values
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - format: tgz
+    name_template: '{{ .ProjectName }}-{{ if eq .Os "darwin" }}macos{{ else }}{{ .Os }}{{ end }}-{{ .Arch }}'
+    wrap_in_directory: migrate-values
+    files:
+      - README.md
+      - plugin.yaml
+      - LICENSE
+
+changelog:
+  use: github-native
+
+release:
+  prerelease: auto

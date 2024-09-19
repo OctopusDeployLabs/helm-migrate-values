@@ -13,3 +13,4 @@ go.work.sum
 
 # Jetbrains IDE
 .idea
+dist/
