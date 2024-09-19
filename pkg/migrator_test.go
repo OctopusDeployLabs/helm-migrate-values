@@ -61,7 +61,7 @@ var migrateAcrossVersionsTestCases = []struct {
 		currentVersion:              1,
 		versionTo:                   ptr(4),
 		includeMigrationsToVersions: []int{},
-		expected:                    version1Config,
+		expected:                    nilConfig,
 	},
 }
 
@@ -111,6 +111,8 @@ var migrationData = map[int]map[string]interface{}{
 	3: version3Migration,
 	4: version4Migration,
 }
+
+var nilConfig = map[string]interface{}(nil)
 
 var version1Config = map[string]interface{}{
 	"agent": map[interface{}]interface{}{
