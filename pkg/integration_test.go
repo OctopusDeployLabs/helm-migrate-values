@@ -1,9 +1,9 @@
 package pkg
 
 import (
+	"github.com/octopusdeploylabs/helm-migrate-values/internal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"helm-migrate-values/internal"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/release"
