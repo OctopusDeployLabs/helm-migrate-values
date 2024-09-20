@@ -1,4 +1,4 @@
-module helm-migrate-values
+module github.com/octopusdeploylabs/helm-migrate-values
 
 go 1.23.0
 

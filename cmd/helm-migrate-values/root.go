@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/octopusdeploylabs/helm-migrate-values/internal"
+	"github.com/octopusdeploylabs/helm-migrate-values/pkg"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v2"
-	"helm-migrate-values/internal"
-	"helm-migrate-values/pkg"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
 	"io"
