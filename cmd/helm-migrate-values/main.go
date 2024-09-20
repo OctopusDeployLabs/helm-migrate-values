@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"helm-migrate-values/internal"
+	"github.com/octopusdeploylabs/helm-migrate-values/internal"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
 	"log"
