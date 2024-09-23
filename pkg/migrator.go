@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/Masterminds/sprig/v3"
-	"github.com/octopusdeploylabs/helm-migrate-values/internal"
 	"gopkg.in/yaml.v2"
 	"os"
 	"slices"
@@ -12,7 +11,7 @@ import (
 	"text/template"
 )
 
-func MigrateFromPath(currentConfig map[string]interface{}, vFrom int, vTo *int, migrationsDir string, log internal.Logger) (map[string]interface{}, error) {
+func MigrateFromPath(currentConfig map[string]interface{}, vFrom int, vTo *int, migrationsDir string, log Logger) (map[string]interface{}, error) {
 
 	if len(currentConfig) == 0 {
 		log.Warning("No existing user-supplied values to migrate")
@@ -48,7 +47,7 @@ func MigrateFromPath(currentConfig map[string]interface{}, vFrom int, vTo *int, 
 	return Migrate(currentConfig, vFrom, vTo, mp, log)
 }
 
-func Migrate(currentConfig map[string]interface{}, vFrom int, vTo *int, mp MigrationProvider, log internal.Logger) (map[string]interface{}, error) {
+func Migrate(currentConfig map[string]interface{}, vFrom int, vTo *int, mp MigrationProvider, log Logger) (map[string]interface{}, error) {
 
 	log.Debug("migrating user-supplied values")
 	versions := slices.Sorted(mp.GetVersions())

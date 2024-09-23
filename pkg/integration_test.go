@@ -1,7 +1,6 @@
 package pkg
 
 import (
-	"github.com/octopusdeploylabs/helm-migrate-values/internal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"helm.sh/helm/v3/pkg/action"
@@ -71,7 +70,7 @@ func migrateCharts(t *testing.T, chartV1Path, chartV2Path string) {
 	req.NoError(err, "Error installing chart v1")
 
 	// Migrate the release user values (config)
-	migratedValues, err := MigrateFromPath(rel1.Config, 1, nil, "test-charts/v2/value-migrations/", *internal.NewLogger(false))
+	migratedValues, err := MigrateFromPath(rel1.Config, 1, nil, "test-charts/v2/value-migrations/", *NewLogger(false))
 	req.NoError(err, "Error migrating values")
 
 	// Load the v2 chart
