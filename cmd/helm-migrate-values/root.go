@@ -47,7 +47,7 @@ The command will return an error if:
 	- no migrations are defined in the chart
 `
 
-func NewRootCmd(actionConfig *action.Configuration, settings *cli.EnvSettings, out io.Writer, log internal.Logger) (*cobra.Command, error) {
+func NewRootCmd(actionConfig *action.Configuration, settings *cli.EnvSettings, out io.Writer, log pkg.Logger) (*cobra.Command, error) {
 	cmd := &cobra.Command{
 		Use:   "migrate-values [RELEASE] [CHART] [flags]",
 		Short: "helm migrator for values schemas",
@@ -67,7 +67,7 @@ func NewRootCmd(actionConfig *action.Configuration, settings *cli.EnvSettings, o
 	return cmd, nil
 }
 
-func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, settings *cli.EnvSettings, out io.Writer, outputFile *string, log internal.Logger) func(cmd *cobra.Command, args []string) error {
+func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, settings *cli.EnvSettings, out io.Writer, outputFile *string, log pkg.Logger) func(cmd *cobra.Command, args []string) error {
 	// We use the install action for locating the chart
 	var installAction = action.NewInstall(actionConfig)
 	var listAction = action.NewList(actionConfig)

@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/octopusdeploylabs/helm-migrate-values/internal"
+	"github.com/octopusdeploylabs/helm-migrate-values/pkg"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
 	"log"
@@ -18,7 +18,7 @@ func init() {
 
 func main() {
 	var actionConfig = new(action.Configuration)
-	logger := *internal.NewLogger(settings.Debug)
+	logger := *pkg.NewLogger(settings.Debug)
 	logger.Debug("Debug mode enabled")
 
 	cmd, err := NewRootCmd(actionConfig, settings, os.Stdout, logger)

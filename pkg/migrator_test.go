@@ -1,7 +1,6 @@
 package pkg
 
 import (
-	"github.com/octopusdeploylabs/helm-migrate-values/internal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -77,7 +76,7 @@ func TestMigrator_MigrateAcrossVersions(t *testing.T) {
 
 			ms := loadMigrationsToVersions(tc.includeMigrationsToVersions)
 
-			migrated, err := Migrate(currentConfig, tc.currentVersion, tc.versionTo, ms, *internal.NewLogger(false))
+			migrated, err := Migrate(currentConfig, tc.currentVersion, tc.versionTo, ms, *NewLogger(false))
 			req.NoError(err)
 
 			is.EqualValues(tc.expected, migrated)
