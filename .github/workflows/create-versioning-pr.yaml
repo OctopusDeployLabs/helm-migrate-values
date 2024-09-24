@@ -1,0 +1,72 @@
+name: Version Plugin
+
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+
+    # For all pushes that aren't creating a versioning commit
+    if: ${{ !startsWith(github.event.commits[0].message, 'Version Helm Plugin') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: setup-node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cache .pnpm-store
+        uses: actions/cache@v3.2.3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-node${{ matrix.node-version }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.11.0
+          run_install: true
+
+      - name: Install YQ
+        uses: dcarbone/install-yq-action@v1.1.1
+
+      - name: Create Release Pull Request
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          commit: 'Version Helm Plugin'
+          title: 'Version Helm Plugin'
+          createGitHubReleases: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine whether version has changed
+        id: changed_packages
+        run: |
+          packageVersion=$(yq -r .version package.json)
+          pluginVersion=$(yq -r .version plugin.yaml)
+          
+          if [[ "packageVersion" != "pluginVersion" ]]; then
+            echo "pluginChanged=true" >> $GITHUB_OUTPUT
+          fi
+        if: steps.changesets.outputs.hasChangesets == 'true'
+
+      - name: 'Update version in plugin.yaml'
+        run: |
+          version=$(yq -r .version package.json)
+          version="$version" yq -i '.version = strenv(version)' plugin.yaml
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add plugin.yaml
+          git commit -m "Update plugin version in plugin.yaml"
+        if: steps.changesets.outputs.hasChangesets == 'true' && steps.changed_packages.outputs.pluginChanged == 'true'
+
+      - name: 'Push changes'
+        run: |
+          git push --set-upstream origin changeset-release/main
+        if: steps.changesets.outputs.hasChangesets == 'true'
