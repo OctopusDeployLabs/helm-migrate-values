@@ -43,7 +43,7 @@ jobs:
           title: 'Version Helm Plugin'
           createGitHubReleases: false
         env:
-          GITHUB_TOKEN: ${{ secrets.CHANGESETS_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Determine whether version has changed
         id: changed_packages
