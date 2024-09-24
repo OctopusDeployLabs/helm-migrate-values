@@ -3,7 +3,7 @@ name: Version Plugin
 on:
   push:
     branches:
-      - 'main'
+      - '**'
 
 jobs:
   version:
