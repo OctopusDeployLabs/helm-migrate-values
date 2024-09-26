@@ -2,8 +2,8 @@ name: Release
 
 on:
   push:
-    tags:
-      - '*'
+    branches:
+      - 'main'
 
 permissions:
   contents: write
@@ -11,19 +11,35 @@ permissions:
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
+
+    if: ${{ startsWith(github.event.commits[0].message, 'Version Helm Plugin') }}
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      -
-        name: Set up Go
+
+      - name: Install YQ
+        uses: dcarbone/install-yq-action@v1.1.1
+
+      - name: Get Version
+        run: |
+          version=$(yq -r .version plugin.yaml)
+          echo "version=$version" >> $GITHUB_OUTPUT;
+          echo "version=$version";
+        id: version
+
+      - name: Tag Commit
+        run: |
+          git tag -f ${{ steps.version.outputs.version }} $(git rev-parse HEAD)
+          git push origin refs/tags/${{ steps.version.outputs.version }}
+
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
-      -
-        name: Run GoReleaser
+
+      - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser

@@ -26,8 +26,9 @@ archives:
       - plugin.yaml
       - LICENSE
 
+# prefer the changelog by changesets as we are using that
 changelog:
-  use: github-native
+  disable: true
 
 release:
   prerelease: auto

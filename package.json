@@ -1,0 +1,13 @@
+{
+  "name": "helm-migrate-values",
+  "version": "0.2.2",
+  "description": "Helm plugin for migrating user-provided release values between chart schema versions",
+  "scripts": {
+    "changeset": "changeset"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.8"
+  },
+  "author": "Octopus Deploy",
+  "license": "Apache-2.0"
+}
