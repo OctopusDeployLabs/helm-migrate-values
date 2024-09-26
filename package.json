@@ -1,6 +1,6 @@
 {
   "name": "helm-migrate-values",
-  "version": "0.2.2",
+  "version": "1.0.0",
   "description": "Helm plugin for migrating user-provided release values between chart schema versions",
   "scripts": {
     "changeset": "changeset"
