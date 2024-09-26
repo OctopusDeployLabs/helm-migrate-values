@@ -1,6 +1,6 @@
 # helm-migrate-values
 
-A plugin to migrate user-specified Helm values between chart versions when the schema of `values.yaml` changes. Define migration paths with migration files in the chart repo to ensure seamless upgrades.
+A plugin to migrate user-specified Helm values between chart versions when the schema of `values.yaml` changes. Define migration paths with migration files in the chart repository to ensure seamless upgrades.
 ## Requirements
 
 - **Helm** version 3 or newer
