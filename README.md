@@ -4,7 +4,7 @@ A plugin to migrate user-specified Helm values between chart versions when the s
 ## Requirements
 
 - **Helm** version 3 or newer
-- **Git** as the `helm plugin install` command requires it
+- **Git** if installing using the `helm plugin install` command below
 
 ## Install
 
