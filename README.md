@@ -37,7 +37,7 @@ helm migrate-values [RELEASE] [CHART] [flags]
 ```
 
 - **RELEASE**: The name of the Helm release you're migrating.
-- **CHART**: The chart you're migrating to, which can be a local chart (specified by file path) or a remote chart (using the `oci://` prefix).
+- **CHART**: The chart you're migrating to, which can be a local chart (specified by file path) or a remote chart (using the `oci://` or `https://` prefixes).
 
 ## Example
 ```
