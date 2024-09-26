@@ -45,12 +45,12 @@ helm migrate-values my-kubernetes-agent oci://registry-1.docker.io/octopusdeploy
   --version 2.4.0 \
   -n octopus-agent-demo \
   --migration-dir kubernetes-agent/value-migrations
+  --output-file migrated-values.yaml
 ```
 
-### Optional: Output the Migration to a File
-You can also specify the `--output-file` flag to save the migrated values YAML to a file, allowing you to inspect or use it in subsequent Helm operations:
+The `--output-file` flag allows you to optionally save the command's output to a file instead of displaying it in stdout, allow you to utilize it in subsequent Helm commands. 
 
-You can then use this file in a helm upgrade command to complete the migration:
+You can then use this file with the helm upgrade command to complete the migration:
 
 ```
 helm upgrade [RELEASE] [CHART] -f migrated-values.yaml --reset-then-reuse-values
