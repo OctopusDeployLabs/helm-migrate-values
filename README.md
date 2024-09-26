@@ -57,6 +57,9 @@ helm upgrade [RELEASE] [CHART] -f migrated-values.yaml --reset-then-reuse-values
 ```
 
 ## Contributing
+
+Please refer to the [Code of Conduct](CODE_OF_CONDUCT.md) before making any contributions.
+
 We adhere to [Semantic Versioning](https://semver.org/) and utilize [@changesets/cli](https://github.com/changesets/changesets) to manage release notes and versioning.
 
 To add a changelog entry for your changes:
