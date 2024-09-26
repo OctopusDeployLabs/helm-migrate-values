@@ -20,8 +20,8 @@ This Helm plugin enables users to migrate values across chart versions, accounti
 > 
 > See [output values](#optional-output-the-migration-to-a-file) section for an example on how to apply the migration to a release 
 
-### Step 1: Define Migration Files
-Start by defining migration files within your Helm chart. These files should be placed under the `value-migrations/` directory, relative to your base chart directory. You can customize the migration directory location by using the `--migration-dir` flag.
+### Step 1: Define the Migration Files
+Start by defining the migration files within your Helm chart. These files should be placed under the `value-migrations/` directory, relative to your base chart directory. You can customize the migration directory location by using the `--migration-dir` flag if necessary.
 
 #### Migration File Naming Convention
 Each migration file should follow the naming format:
