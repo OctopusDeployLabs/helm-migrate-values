@@ -28,7 +28,7 @@ Each migration file should conform to the following naming format:
 `to-v{VERSION_TO}.yaml`, where **VERSION_TO** is the target chart's major version number. The plugin will use this file to define the transformation between the previous version and the specified version.
 
 #### Migration File Structure
-These migration files are written in YAML, using Go templating for transforming and mapping values from the old schema to the new one. See this [example](pkg/test-charts/v2/value-migrations/to-v2.yaml) from the integration test.
+Migration files are written in YAML and use Go templating, similar to Helm templates. They leverage Sprig v3's [TxtFuncMap](https://github.com/Masterminds/sprig/blob/fc7fc0d6a0377bca7049c4a99e80b85f222d8caf/functions.go#L49) functions for transforming and mapping values between old and new schemas. See this [example](pkg/test-charts/v2/value-migrations/to-v2.yaml) of a migration definition from the integration test.
 
 ### Step 2: Run the Migration
 To migrate your Helm release to a new chart version, use the following command:
