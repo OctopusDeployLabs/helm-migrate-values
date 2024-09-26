@@ -60,14 +60,16 @@ func NewRootCmd(actionConfig *action.Configuration, settings *cli.EnvSettings, o
 	var outputFile string
 	flags.StringVarP(&outputFile, "output-file", "o", "",
 		"The output file to which the result is saved. Standard output is used if this option is not set.")
+	var migrationDir string
+	flags.StringVar(&migrationDir, "migration-dir", "value-migrations", "Specifies the relative path to the directory containing migration definition files. The path should be relative to the Helm chart directory.")
 
-	runner := newRunner(actionConfig, flags, settings, out, &outputFile, log)
+	runner := newRunner(actionConfig, flags, settings, out, &migrationDir, &outputFile, log)
 	cmd.RunE = runner
 
 	return cmd, nil
 }
 
-func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, settings *cli.EnvSettings, out io.Writer, outputFile *string, log pkg.Logger) func(cmd *cobra.Command, args []string) error {
+func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, settings *cli.EnvSettings, out io.Writer, migrationDir *string, outputFile *string, log pkg.Logger) func(cmd *cobra.Command, args []string) error {
 	// We use the install action for locating the chart
 	var installAction = action.NewInstall(actionConfig)
 	var listAction = action.NewList(actionConfig)
@@ -128,7 +130,7 @@ func newRunner(actionConfig *action.Configuration, flags *pflag.FlagSet, setting
 				return fmt.Errorf("failed to extract major version from chart version: %s", release.Chart.Metadata.Version)
 			}
 			relMajorVer, _ := strconv.Atoi(matches[1])
-			migrationsPath := filepath.Join(*chartDir, release.Chart.Name(), "value-migrations")
+			migrationsPath := filepath.Join(*chartDir, *migrationDir)
 
 			// vTo is always nil, because it really only makes sense to migrate to the current chart version.
 			// The migrations library does support migrating to a specific version though.
