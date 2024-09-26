@@ -16,7 +16,7 @@ $ helm plugin install https://github.com/OctopusDeploy/helm-migrate-values.git
 
 This Helm plugin enables users to migrate values across chart versions, accounting for changes in the values.yaml schema.
 
-> **_NOTE:_** The intended usage of this plugin is that it does not apply any changes to the release on its own. It simply outputs the values to override, which are meant to be used with `helm upgrade --reset-then-reuse-values`.
+> **_NOTE:_** The intended usage of this plugin is that it does not apply any changes to the release on its own. It simply outputs the values to override, which are to be used with `helm upgrade --reset-then-reuse-values`.
 > 
 > See [output values](#optional-output-the-migration-to-a-file) section for an example on how to apply the migration to a release 
 
