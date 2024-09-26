@@ -24,8 +24,8 @@ This Helm plugin enables users to migrate values across chart versions, accounti
 Start by defining the migration files within your Helm chart. These files should be placed under the `value-migrations/` directory, relative to your base chart directory. You can customize the migration directory location by using the `--migration-dir` flag if necessary.
 
 #### Migration File Naming Convention
-Each migration file should follow the naming format:
-`to-v{VERSION_TO}.yaml`, where **VERSION_TO** is the target chart version. The plugin will use this file to define the transformation between the previous version and the specified version.
+Each migration file should conform to the following naming format:
+`to-v{VERSION_TO}.yaml`, where **VERSION_TO** is the target chart's major version number. The plugin will use this file to define the transformation between the previous version and the specified version.
 
 #### Migration File Structure
 These migration files are written in YAML, using Go templating for transforming and mapping values from the old schema to the new one. See this [example](pkg/test-charts/v2/value-migrations/to-v2.yaml) from the integration test.
