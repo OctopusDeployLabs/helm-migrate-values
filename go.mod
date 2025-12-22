@@ -1,6 +1,6 @@
 module github.com/octopusdeploylabs/helm-migrate-values
 
-go 1.23.0
+go 1.25.5
 
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3
