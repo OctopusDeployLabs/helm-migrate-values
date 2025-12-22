@@ -1,3 +1,5 @@
+version: 2
+
 before:
   hooks:
     - go mod tidy
@@ -18,13 +20,15 @@ builds:
       - arm64
 
 archives:
-  - format: tgz
-    name_template: '{{ .ProjectName }}-{{ if eq .Os "darwin" }}macos{{ else }}{{ .Os }}{{ end }}-{{ .Arch }}'
+  - name_template: '{{ .ProjectName }}-{{ if eq .Os "darwin" }}macos{{ else }}{{ .Os }}{{ end }}-{{ .Arch }}'
     wrap_in_directory: migrate-values
     files:
       - README.md
       - plugin.yaml
       - LICENSE
+    format_overrides:
+      - goos: windows
+        format: zip
 
 # prefer the changelog by changesets as we are using that
 changelog:
